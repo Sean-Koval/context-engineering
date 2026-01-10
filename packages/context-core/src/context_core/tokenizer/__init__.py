@@ -5,6 +5,7 @@ Components:
 - TiktokenTokenizer: OpenAI tiktoken implementation
 - AnthropicTokenizer: Anthropic Claude estimation
 - EstimateTokenizer: Fallback estimation
+- get_tokenizer: Factory function for getting appropriate tokenizer
 
 Example:
     >>> from context_core.tokenizer import get_tokenizer
