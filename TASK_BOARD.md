@@ -1,7 +1,9 @@
 # ContextEngine: Complete Task Board
 
-> **Total Tasks**: 157 | **Total Hours**: ~582 hours | **Duration**: 24 weeks
+> **Total Tasks**: 157 | **Completed**: 40 | **Total Hours**: ~582 hours | **Duration**: 24 weeks
 > This document provides a complete, granular task breakdown for implementation.
+>
+> **Current Progress**: Phase 1 core implementation ~70% complete. Graph, Tokenizer, TokenBudget, and Observability modules done. EntityTracker and SemanticIndex remaining.
 
 ---
 
@@ -25,7 +27,7 @@
 
 | ID | Task | Hours | Deps | Status | Assignee |
 |----|------|-------|------|--------|----------|
-| CG-000 | Initialize monorepo structure with uv: create `packages/context-core/`, `pyproject.toml`, basic directory structure | 2 | - | ⬜ | |
+| CG-000 | Initialize monorepo structure with uv: create `packages/context-core/`, `pyproject.toml`, basic directory structure | 2 | - | ✅ | Claude |
 
 **Week 0 Subtotal**: 2 hours
 
@@ -33,19 +35,19 @@
 
 | ID | Task | Hours | Deps | Status | Assignee |
 |----|------|-------|------|--------|----------|
-| CG-001 | Create `graph/types.py` with NodeType, EdgeType, CompressionLevel, Role enums | 2 | CG-000 | ⬜ | |
-| CG-002 | Implement `Content` Pydantic model with all node type fields | 4 | CG-001 | ⬜ | |
-| CG-003 | Implement `NodeMetadata` model with importance scoring | 3 | CG-001 | ⬜ | |
-| CG-004 | Implement `ContextNode` model with `compute_importance()` and `to_message_dict()` | 4 | CG-002, CG-003 | ⬜ | |
-| CG-005 | Implement `Edge` and `EdgeMetadata` models | 2 | CG-001 | ⬜ | |
-| CG-006 | Implement `ContextGraph` CRUD operations (add_node, get_node, update_node, remove_node) | 8 | CG-004, CG-005 | ⬜ | |
-| CG-007 | Implement `ContextGraph.add_message()`, `add_tool_call()`, `add_tool_result()` helpers | 3 | CG-006 | ⬜ | |
-| CG-008 | Implement `ContextGraph.query_nodes()` with all filter criteria | 6 | CG-006 | ⬜ | |
-| CG-009 | Implement `ContextGraph.get_subgraph()` with depth-limited traversal | 4 | CG-006 | ⬜ | |
-| CG-010 | Implement `ContextGraph.to_dict()` and `from_dict()` serialization | 4 | CG-006 | ⬜ | |
-| CG-011 | Implement `ContextGraph.to_messages()` for LLM-ready output | 4 | CG-006 | ⬜ | |
-| CG-012 | Implement `GraphStats` model and `ContextGraph.stats()` | 2 | CG-006 | ⬜ | |
-| CG-013 | Write unit tests for all ContextGraph operations | 8 | CG-001-CG-012 | ⬜ | |
+| CG-001 | Create `graph/types.py` with NodeType, EdgeType, CompressionLevel, Role enums | 2 | CG-000 | ✅ | Claude |
+| CG-002 | Implement `Content` Pydantic model with all node type fields | 4 | CG-001 | ✅ | Claude |
+| CG-003 | Implement `NodeMetadata` model with importance scoring | 3 | CG-001 | ✅ | Claude |
+| CG-004 | Implement `ContextNode` model with `compute_importance()` and `to_message_dict()` | 4 | CG-002, CG-003 | ✅ | Claude |
+| CG-005 | Implement `Edge` and `EdgeMetadata` models | 2 | CG-001 | ✅ | Claude |
+| CG-006 | Implement `ContextGraph` CRUD operations (add_node, get_node, update_node, remove_node) | 8 | CG-004, CG-005 | ✅ | Claude |
+| CG-007 | Implement `ContextGraph.add_message()`, `add_tool_call()`, `add_tool_result()` helpers | 3 | CG-006 | ✅ | Claude |
+| CG-008 | Implement `ContextGraph.query_nodes()` with all filter criteria | 6 | CG-006 | ✅ | Claude |
+| CG-009 | Implement `ContextGraph.get_subgraph()` with depth-limited traversal | 4 | CG-006 | ✅ | Claude |
+| CG-010 | Implement `ContextGraph.to_dict()` and `from_dict()` serialization | 4 | CG-006 | ✅ | Claude |
+| CG-011 | Implement `ContextGraph.to_messages()` for LLM-ready output | 4 | CG-006 | ✅ | Claude |
+| CG-012 | Implement `GraphStats` model and `ContextGraph.stats()` | 2 | CG-006 | ✅ | Claude |
+| CG-013 | Write unit tests for all ContextGraph operations | 8 | CG-001-CG-012 | ✅ | Claude |
 | CG-014 | Write integration tests for graph round-trip scenarios | 4 | CG-013 | ⬜ | |
 
 **Week 1-2 Subtotal**: 58 hours
@@ -89,19 +91,19 @@
 
 | ID | Task | Hours | Deps | Status | Assignee |
 |----|------|-------|------|--------|----------|
-| TB-001 | Implement `BudgetSection` model | 2 | - | ⬜ | |
-| TB-002 | Implement `BudgetAlert` model | 1 | - | ⬜ | |
-| TB-003 | Implement `OverflowStrategy` enum | 1 | - | ⬜ | |
-| TB-004 | Implement `TokenBudget.__init__()` with default sections | 3 | TB-001-TB-003 | ⬜ | |
-| TB-005 | Implement `TokenBudget.allocate()` and `deallocate()` | 4 | TB-004 | ⬜ | |
-| TB-006 | Implement pre-rot threshold detection and alerts | 3 | TB-004 | ⬜ | |
-| TB-007 | Implement `TokenBudget.get_compression_priority()` | 2 | TB-004 | ⬜ | |
-| TB-008 | Implement `TokenBudget.to_dict()` and `summary()` | 2 | TB-004 | ⬜ | |
-| TK-001 | Define `Tokenizer` protocol | 2 | - | ⬜ | |
-| TK-002 | Implement `TiktokenTokenizer` | 3 | TK-001 | ⬜ | |
-| TK-003 | Implement `EstimateTokenizer` fallback | 2 | TK-001 | ⬜ | |
-| TK-004 | Implement `get_tokenizer()` factory function | 1 | TK-001-TK-003 | ⬜ | |
-| TB-009 | Write unit tests for TokenBudget and Tokenizer | 6 | TB-001-TK-004 | ⬜ | |
+| TB-001 | Implement `BudgetSection` model | 2 | - | ✅ | Claude |
+| TB-002 | Implement `BudgetAlert` model | 1 | - | ✅ | Claude |
+| TB-003 | Implement `OverflowStrategy` enum | 1 | - | ✅ | Claude |
+| TB-004 | Implement `TokenBudget.__init__()` with default sections | 3 | TB-001-TB-003 | ✅ | Claude |
+| TB-005 | Implement `TokenBudget.allocate()` and `deallocate()` | 4 | TB-004 | ✅ | Claude |
+| TB-006 | Implement pre-rot threshold detection and alerts | 3 | TB-004 | ✅ | Claude |
+| TB-007 | Implement `TokenBudget.get_compression_priority()` | 2 | TB-004 | ✅ | Claude |
+| TB-008 | Implement `TokenBudget.to_dict()` and `summary()` | 2 | TB-004 | ✅ | Claude |
+| TK-001 | Define `Tokenizer` protocol | 2 | - | ✅ | Claude |
+| TK-002 | Implement `TiktokenTokenizer` | 3 | TK-001 | ✅ | Claude |
+| TK-003 | Implement `EstimateTokenizer` fallback | 2 | TK-001 | ✅ | Claude |
+| TK-004 | Implement `get_tokenizer()` factory function | 1 | TK-001-TK-003 | ✅ | Claude |
+| TB-009 | Write unit tests for TokenBudget and Tokenizer | 6 | TB-001-TK-004 | ✅ | Claude |
 
 **Week 5 Subtotal**: 32 hours
 
@@ -109,16 +111,16 @@
 
 | ID | Task | Hours | Deps | Status | Assignee |
 |----|------|-------|------|--------|----------|
-| OB-001 | Implement `SpanAttributes` model | 2 | - | ⬜ | |
-| OB-002 | Implement `ContextTracer.span()` context manager | 4 | OB-001 | ⬜ | |
-| OB-003 | Implement tracer convenience methods (trace_graph_operation, etc.) | 3 | OB-002 | ⬜ | |
-| OB-004 | Implement `@traced` decorator | 2 | OB-002 | ⬜ | |
-| OB-005 | Implement `ContextMetrics._init_metrics()` with all instruments | 4 | - | ⬜ | |
-| OB-006 | Implement metrics recording methods | 4 | OB-005 | ⬜ | |
-| OB-007 | Implement `MetricSnapshot` and `ContextMetrics.snapshot()` | 2 | OB-005 | ⬜ | |
-| OB-008 | Implement `ContextEvents` with structlog | 4 | - | ⬜ | |
-| OB-009 | Implement event logging methods (session_started, compression_completed, etc.) | 3 | OB-008 | ⬜ | |
-| OB-010 | Write unit tests for observability | 6 | OB-001-OB-009 | ⬜ | |
+| OB-001 | Implement `SpanAttributes` model | 2 | - | ✅ | Claude |
+| OB-002 | Implement `ContextTracer.span()` context manager | 4 | OB-001 | ✅ | Claude |
+| OB-003 | Implement tracer convenience methods (trace_graph_operation, etc.) | 3 | OB-002 | ✅ | Claude |
+| OB-004 | Implement `@traced` decorator | 2 | OB-002 | ✅ | Claude |
+| OB-005 | Implement `ContextMetrics._init_metrics()` with all instruments | 4 | - | ✅ | Claude |
+| OB-006 | Implement metrics recording methods | 4 | OB-005 | ✅ | Claude |
+| OB-007 | Implement `MetricSnapshot` and `ContextMetrics.snapshot()` | 2 | OB-005 | ✅ | Claude |
+| OB-008 | Implement `ContextEvents` with structlog | 4 | - | ✅ | Claude |
+| OB-009 | Implement event logging methods (session_started, compression_completed, etc.) | 3 | OB-008 | ✅ | Claude |
+| OB-010 | Write unit tests for observability | 6 | OB-001-OB-009 | ✅ | Claude |
 
 **Week 5-6 Subtotal**: 34 hours
 
@@ -126,13 +128,13 @@
 
 | ID | Task | Hours | Deps | Status | Assignee |
 |----|------|-------|------|--------|----------|
-| P1-001 | Create `context_core/__init__.py` with clean exports | 2 | All CG, ET, SI, TB, TK | ⬜ | |
-| P1-002 | Create `context_observe/__init__.py` with clean exports | 1 | All OB | ⬜ | |
+| P1-001 | Create `context_core/__init__.py` with clean exports | 2 | All CG, ET, SI, TB, TK | ✅ | Claude |
+| P1-002 | Create `context_observe/__init__.py` with clean exports | 1 | All OB | ✅ | Claude |
 | P1-003 | Write end-to-end integration tests | 8 | P1-001, P1-002 | ⬜ | |
 | P1-004 | Create performance benchmarks | 4 | P1-001 | ⬜ | |
 | P1-005 | Write API documentation | 6 | P1-001, P1-002 | ⬜ | |
-| P1-006 | Create `pyproject.toml` for context-core | 2 | P1-001 | ⬜ | |
-| P1-007 | Create `pyproject.toml` for context-observe | 1 | P1-002 | ⬜ | |
+| P1-006 | Create `pyproject.toml` for context-core | 2 | P1-001 | ✅ | Claude |
+| P1-007 | Create `pyproject.toml` for context-observe | 1 | P1-002 | ✅ | Claude |
 | P1-008 | Set up CI/CD (GitHub Actions) | 4 | P1-006, P1-007 | ⬜ | |
 
 **Week 6 Subtotal**: 28 hours
@@ -602,6 +604,7 @@ Total: 24 weeks
 
 ---
 
-*Last Updated: 2026-01-09*
+*Last Updated: 2026-01-10*
 *Total Tasks: 157*
+*Completed Tasks: 40*
 *Total Estimated Hours: ~582*
