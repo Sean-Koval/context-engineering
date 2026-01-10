@@ -7,3 +7,17 @@ Components:
 """
 
 from __future__ import annotations
+
+from context_core.graph.types import (
+    CompressionLevel,
+    EdgeType,
+    NodeType,
+    Role,
+)
+
+__all__ = [
+    "CompressionLevel",
+    "EdgeType",
+    "NodeType",
+    "Role",
+]
