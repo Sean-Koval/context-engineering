@@ -1,0 +1,79 @@
+[project]
+name = "context-observe"
+version = "0.1.0"
+description = "OpenTelemetry-native observability for ContextEngine"
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "MIT" }
+authors = [{ name = "ContextEngine Team" }]
+keywords = ["llm", "context", "observability", "opentelemetry", "tracing", "metrics"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+dependencies = [
+    "pydantic>=2.0",
+    "opentelemetry-api>=1.20",
+    "opentelemetry-sdk>=1.20",
+    "structlog>=23.0",
+]
+
+[project.optional-dependencies]
+prometheus = ["prometheus-client>=0.17"]
+jaeger = ["opentelemetry-exporter-jaeger>=1.20"]
+otlp = ["opentelemetry-exporter-otlp>=1.20"]
+all = ["context-observe[prometheus,otlp]"]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+    "pytest-asyncio>=0.21",
+    "ruff>=0.1.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/context-engine/context-observe"
+Documentation = "https://context-engine.dev/docs/observe"
+Repository = "https://github.com/context-engine/context-observe"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/context_observe"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP", "ANN", "B", "C4", "SIM"]
+ignore = ["ANN101", "ANN102", "ANN401", "UP047"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+
+[tool.coverage.run]
+source = ["src/context_observe"]
+branch = true
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.2",
+    "pytest-asyncio>=1.3.0",
+    "pytest-cov>=7.0.0",
+    "ruff>=0.14.11",
+]
