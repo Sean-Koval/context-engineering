@@ -24,3 +24,8 @@ include = ["src/context_core"]
 [tool.hatch.build.targets.wheel]
 packages = ["src/context_core"]
 sources = ["src"]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.2",
+]
