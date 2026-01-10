@@ -8,6 +8,8 @@ Components:
 
 from __future__ import annotations
 
+from context_core.graph.edges import Edge, EdgeMetadata
+from context_core.graph.nodes import Content, ContextNode, NodeMetadata
 from context_core.graph.types import (
     CompressionLevel,
     EdgeType,
@@ -16,8 +18,16 @@ from context_core.graph.types import (
 )
 
 __all__ = [
+    # Types
     "CompressionLevel",
     "EdgeType",
     "NodeType",
     "Role",
+    # Nodes
+    "Content",
+    "ContextNode",
+    "NodeMetadata",
+    # Edges
+    "Edge",
+    "EdgeMetadata",
 ]
