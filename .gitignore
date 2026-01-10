@@ -45,3 +45,6 @@ htmlcov/
 # Type checking
 .mypy_cache/
 .ty/
+
+# Worktree session tracking
+.worktree-sessions.json
