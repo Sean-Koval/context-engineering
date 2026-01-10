@@ -4,15 +4,15 @@
 
 This roadmap contains everything needed to build ContextEngine - an open-source context management platform for LLM-powered agents.
 
-| File | Purpose | Size |
-|------|---------|------|
-| `MASTER_ROADMAP.md` | **START HERE** - High-level vision, architecture, phases, success metrics | 29K |
-| `specs/01-context-core.md` | Foundation: Graph, Entities, Semantic Index, Token Budget | 73K |
-| `specs/02-context-compression.md` | Compression Pipeline: Strategies, Recovery | 73K |
-| `specs/03-context-memory.md` | Persistent Storage: Backends, Tiering, Retrieval | 79K |
-| `specs/04-context-tools.md` | Tool Optimization: Cache, Patterns, Compression | 52K |
-| `specs/05-context-observe.md` | Observability: Tracing, Metrics, Events | 48K |
-| `specs/06-context-multiagent.md` | Multi-Agent: Broker, Handoff, Sync | 3.5K |
+| File | Purpose |
+|------|---------|
+| `MASTER_ROADMAP.md` | **START HERE** - High-level vision, architecture, phases, success metrics |
+| `specs/01-context-core-detailed.md` | Foundation: Graph, Entities, Semantic Index, Token Budget |
+| `specs/02-context-compression-detailed.md` | Compression Pipeline: Strategies, Recovery |
+| `specs/03-context-memory-detailed.md` | Persistent Storage: Backends, Tiering, Retrieval |
+| `specs/04-context-tools-detailed.md` | Tool Optimization: Cache, Patterns, Compression |
+| `specs/05-context-observe-detailed.md` | Observability: Tracing, Metrics, Events |
+| `specs/06-context-multiagent-detailed.md` | Multi-Agent: Broker, Handoff, Sync |
 
 ---
 
@@ -247,12 +247,12 @@ These are opportunities for novel contributions:
 | Understand the vision | `MASTER_ROADMAP.md` → Executive Summary |
 | See the architecture | `MASTER_ROADMAP.md` → Architecture Overview |
 | Plan implementation phases | `MASTER_ROADMAP.md` → Implementation Phases |
-| Build the graph model | `specs/01-context-core.md` → Component 1: ContextGraph |
-| Implement compression | `specs/02-context-compression.md` |
-| Build storage backends | `specs/03-context-memory.md` → Component 2: Storage Backends |
-| Implement tool caching | `specs/04-context-tools.md` → Component 1: ToolCallCache |
-| Add observability | `specs/05-context-observe.md` |
-| Enable multi-agent | `specs/06-context-multiagent.md` |
+| Build the graph model | `specs/01-context-core-detailed.md` → Component 1: ContextGraph |
+| Implement compression | `specs/02-context-compression-detailed.md` |
+| Build storage backends | `specs/03-context-memory-detailed.md` → Component 2: Storage Backends |
+| Implement tool caching | `specs/04-context-tools-detailed.md` → Component 1: ToolCallCache |
+| Add observability | `specs/05-context-observe-detailed.md` |
+| Enable multi-agent | `specs/06-context-multiagent-detailed.md` |
 
 ---
 
