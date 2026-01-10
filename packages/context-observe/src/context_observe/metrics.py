@@ -16,7 +16,7 @@ from pydantic import BaseModel, Field
 class MetricSnapshot(BaseModel):
     """Snapshot of current metrics."""
 
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
     token_usage: float = Field(description="Current token usage ratio (0.0-1.0)")
     compression_ratio: float = Field(description="Last compression ratio achieved")
     cache_hit_rate: float = Field(description="Cache hit rate (0.0-1.0)")

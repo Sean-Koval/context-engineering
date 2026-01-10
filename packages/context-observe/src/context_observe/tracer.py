@@ -5,16 +5,13 @@ from __future__ import annotations
 from collections.abc import Callable, Generator
 from contextlib import contextmanager
 from functools import wraps
-from typing import TYPE_CHECKING, Any, TypeVar
+from typing import Any, TypeVar
 
 from opentelemetry import trace
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor, SpanExporter
 from opentelemetry.trace import Span, Status, StatusCode
 from pydantic import BaseModel, Field
-
-if TYPE_CHECKING:
-    pass
 
 F = TypeVar("F", bound=Callable[..., Any])
 
@@ -118,8 +115,7 @@ class ContextTracer:
     def _set_attributes(self, span: Span, attributes: SpanAttributes) -> None:
         """Set span attributes from model."""
         for key, value in attributes.model_dump(exclude_none=True).items():
-            if value is not None:
-                span.set_attribute(f"context.{key}", value)
+            span.set_attribute(f"context.{key}", value)
 
     # Convenience methods for common operations
 

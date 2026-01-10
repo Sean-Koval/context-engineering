@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import sys
 from collections.abc import Sequence
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import TextIO
 
 from opentelemetry.sdk.metrics.export import (
@@ -74,7 +74,7 @@ class ConsoleSpanExporter(SpanExporter):
             status_color = reset = ""
 
         # Print span info
-        timestamp = datetime.utcnow().isoformat()
+        timestamp = datetime.now(UTC).isoformat()
         line = (
             f"[{timestamp}] SPAN {span.name} "
             f"[{status_color}{status}{reset}] "
@@ -136,7 +136,7 @@ class ConsoleMetricExporter(MetricExporter):
         **kwargs: object,
     ) -> MetricExportResult:
         """Export metrics to console."""
-        timestamp = datetime.utcnow().isoformat()
+        timestamp = datetime.now(UTC).isoformat()
 
         for resource_metrics in metrics_data.resource_metrics:
             for scope_metrics in resource_metrics.scope_metrics:

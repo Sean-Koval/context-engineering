@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import time
 from collections.abc import Callable
 from functools import wraps
@@ -107,15 +108,13 @@ def traced(
             tracer = get_tracer()
             attrs = SpanAttributes(operation_type=op_type)
 
-            if include_args:
-                # Add safe string representations of args
-                attrs_dict = attrs.model_dump(exclude_none=True)
-                for i, arg in enumerate(args[:5]):  # Limit to first 5 args
-                    attrs_dict[f"arg_{i}"] = _safe_repr(arg)
-                for key, value in list(kwargs.items())[:10]:  # Limit to 10 kwargs
-                    attrs_dict[f"kwarg_{key}"] = _safe_repr(value)
-
-            with tracer.span(op_type, attrs):
+            with tracer.span(op_type, attrs) as span:
+                if include_args:
+                    # Add safe string representations of args to span
+                    for i, arg in enumerate(args[:5]):  # Limit to first 5 args
+                        span.set_attribute(f"context.arg_{i}", _safe_repr(arg))
+                    for key, value in list(kwargs.items())[:10]:  # Limit to 10 kwargs
+                        span.set_attribute(f"context.kwarg_{key}", _safe_repr(value))
                 return fn(*args, **kwargs)
 
         @wraps(fn)
@@ -123,18 +122,13 @@ def traced(
             tracer = get_tracer()
             attrs = SpanAttributes(operation_type=op_type)
 
-            if include_args:
-                attrs_dict = attrs.model_dump(exclude_none=True)
-                for i, arg in enumerate(args[:5]):
-                    attrs_dict[f"arg_{i}"] = _safe_repr(arg)
-                for key, value in list(kwargs.items())[:10]:
-                    attrs_dict[f"kwarg_{key}"] = _safe_repr(value)
-
-            with tracer.span(op_type, attrs):
+            with tracer.span(op_type, attrs) as span:
+                if include_args:
+                    for i, arg in enumerate(args[:5]):
+                        span.set_attribute(f"context.arg_{i}", _safe_repr(arg))
+                    for key, value in list(kwargs.items())[:10]:
+                        span.set_attribute(f"context.kwarg_{key}", _safe_repr(value))
                 return await fn(*args, **kwargs)
-
-        # Choose wrapper based on whether function is async
-        import asyncio
 
         if asyncio.iscoroutinefunction(fn):
             return async_wrapper  # type: ignore[return-value]
@@ -233,8 +227,6 @@ def metered(
                     )
                 if record_count:
                     metrics_instance.record_graph_operation(op_name, session_id or "unknown")
-
-        import asyncio
 
         if asyncio.iscoroutinefunction(fn):
             return async_wrapper  # type: ignore[return-value]
