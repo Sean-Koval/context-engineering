@@ -369,13 +369,13 @@ class LearnedScorer(ImportanceScorer):
 
 ```bash
 # Install core package
-pip install context-engine
+uv add context-engine
 
 # Or with all extras
-pip install context-engine[all]
+uv add context-engine[all]
 
 # Or specific components
-pip install context-engine-core context-engine-compression
+uv add context-engine-core context-engine-compression
 ```
 
 ```python
@@ -643,8 +643,8 @@ context-engine/
 ## Getting Started (For Contributors)
 
 ### Prerequisites
-- Python 3.10+
-- uv or poetry for dependency management
+- Python 3.12+
+- uv for dependency management
 - Docker (for integration tests)
 
 ### Development Setup
@@ -682,12 +682,12 @@ Each project has a detailed specification document:
 
 | Project | Spec Document | Status |
 |---------|---------------|--------|
-| context-core | [specs/01-context-core.md](specs/01-context-core.md) | ✅ Complete |
-| context-compression | [specs/02-context-compression.md](specs/02-context-compression.md) | ✅ Complete |
-| context-memory | [specs/03-context-memory.md](specs/03-context-memory.md) | 📝 In Progress |
-| context-tools | [specs/04-context-tools.md](specs/04-context-tools.md) | 📝 In Progress |
-| context-observe | [specs/05-context-observe.md](specs/05-context-observe.md) | 📝 In Progress |
-| context-multiagent | [specs/06-context-multiagent.md](specs/06-context-multiagent.md) | 📝 In Progress |
+| context-core | [specs/01-context-core-detailed.md](specs/01-context-core-detailed.md) | ✅ Complete |
+| context-compression | [specs/02-context-compression-detailed.md](specs/02-context-compression-detailed.md) | ✅ Complete |
+| context-memory | [specs/03-context-memory-detailed.md](specs/03-context-memory-detailed.md) | ✅ Complete |
+| context-tools | [specs/04-context-tools-detailed.md](specs/04-context-tools-detailed.md) | ✅ Complete |
+| context-observe | [specs/05-context-observe-detailed.md](specs/05-context-observe-detailed.md) | ✅ Complete |
+| context-multiagent | [specs/06-context-multiagent-detailed.md](specs/06-context-multiagent-detailed.md) | ✅ Complete |
 
 ---
 

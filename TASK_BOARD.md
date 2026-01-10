@@ -1,6 +1,6 @@
 # ContextEngine: Complete Task Board
 
-> **Total Tasks**: 156 | **Total Hours**: ~580 hours | **Duration**: 24 weeks
+> **Total Tasks**: 157 | **Total Hours**: ~582 hours | **Duration**: 24 weeks
 > This document provides a complete, granular task breakdown for implementation.
 
 ---
@@ -21,11 +21,19 @@
 
 ### Package: context-core
 
+#### Week 0: Project Initialization
+
+| ID | Task | Hours | Deps | Status | Assignee |
+|----|------|-------|------|--------|----------|
+| CG-000 | Initialize monorepo structure with uv: create `packages/context-core/`, `pyproject.toml`, basic directory structure | 2 | - | ⬜ | |
+
+**Week 0 Subtotal**: 2 hours
+
 #### Week 1-2: ContextGraph
 
 | ID | Task | Hours | Deps | Status | Assignee |
 |----|------|-------|------|--------|----------|
-| CG-001 | Create `graph/types.py` with NodeType, EdgeType, CompressionLevel, Role enums | 2 | - | ⬜ | |
+| CG-001 | Create `graph/types.py` with NodeType, EdgeType, CompressionLevel, Role enums | 2 | CG-000 | ⬜ | |
 | CG-002 | Implement `Content` Pydantic model with all node type fields | 4 | CG-001 | ⬜ | |
 | CG-003 | Implement `NodeMetadata` model with importance scoring | 3 | CG-001 | ⬜ | |
 | CG-004 | Implement `ContextNode` model with `compute_importance()` and `to_message_dict()` | 4 | CG-002, CG-003 | ⬜ | |
@@ -129,7 +137,7 @@
 
 **Week 6 Subtotal**: 28 hours
 
-### Phase 1 Total: 220 hours (~6 weeks @ 40 hrs/week)
+### Phase 1 Total: 222 hours (~6 weeks @ 40 hrs/week)
 
 ---
 
@@ -534,7 +542,7 @@
 The critical path determines the minimum project duration:
 
 ```
-CG-001 → CG-006 → CG-008 → P1-003 → CP-004 → CP-008 → LS-006 → P2-002 →
+CG-000 → CG-001 → CG-006 → CG-008 → P1-003 → CP-004 → CP-008 → LS-006 → P2-002 →
 MS-002 → MS-004 → TS-002 → MR-007 → P3-003 → MA-006 → HO-003 → P4-004
 
 Total: 24 weeks
@@ -594,6 +602,6 @@ Total: 24 weeks
 
 ---
 
-*Last Updated: 2025-01-06*
-*Total Tasks: 156*
-*Total Estimated Hours: ~580*
+*Last Updated: 2026-01-09*
+*Total Tasks: 157*
+*Total Estimated Hours: ~582*
