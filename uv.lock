@@ -193,6 +193,11 @@ tiktoken = [
     { name = "tiktoken" },
 ]
 
+[package.dev-dependencies]
+dev = [
+    { name = "pytest" },
+]
+
 [package.metadata]
 requires-dist = [
     { name = "networkx", specifier = ">=3.0" },
@@ -203,6 +208,9 @@ requires-dist = [
     { name = "tiktoken", marker = "extra == 'tiktoken'", specifier = ">=0.5" },
 ]
 provides-extras = ["ner", "embeddings", "tiktoken"]
+
+[package.metadata.requires-dev]
+dev = [{ name = "pytest", specifier = ">=9.0.2" }]
 
 [[package]]
 name = "context-engine"

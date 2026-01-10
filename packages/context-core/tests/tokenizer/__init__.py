@@ -1,1 +1,1 @@
-"""Tests for the tokenizer module."""
+"""Tests for tokenizer module."""
