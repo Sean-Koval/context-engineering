@@ -12,6 +12,7 @@ Strategies:
 from __future__ import annotations
 
 from context_compression.strategies.lossless.collapse import CollapseToolChains
+from context_compression.strategies.lossless.deduplicate import DeduplicateSemantically
 from context_compression.strategies.lossless.externalize import (
     ExternalizePayloads,
     ExternalStorage,
@@ -22,5 +23,6 @@ __all__ = [
     "ExternalStorage",
     "InMemoryExternalStorage",
     "ExternalizePayloads",
+    "DeduplicateSemantically",
     "CollapseToolChains",
 ]
