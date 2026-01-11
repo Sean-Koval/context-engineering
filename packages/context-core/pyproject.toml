@@ -13,6 +13,8 @@ dependencies = [
 ner = ["spacy>=3.7"]
 embeddings = ["sentence-transformers>=2.2"]
 tiktoken = ["tiktoken>=0.5"]
+qdrant = ["qdrant-client>=1.7"]
+semantic = ["sentence-transformers>=2.2", "qdrant-client>=1.7"]
 
 [build-system]
 requires = ["hatchling"]
