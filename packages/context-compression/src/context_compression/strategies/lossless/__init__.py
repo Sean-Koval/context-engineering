@@ -15,11 +15,13 @@ from context_compression.strategies.lossless.collapse import CollapseToolChains
 from context_compression.strategies.lossless.externalize import (
     ExternalizePayloads,
     ExternalStorage,
+    FileSystemExternalStorage,
     InMemoryExternalStorage,
 )
 
 __all__ = [
     "ExternalStorage",
+    "FileSystemExternalStorage",
     "InMemoryExternalStorage",
     "ExternalizePayloads",
     "CollapseToolChains",
