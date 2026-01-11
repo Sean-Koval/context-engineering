@@ -30,6 +30,7 @@ class Content(BaseModel):
         role: Message role (MESSAGE nodes)
         tool_name: Name of the tool (TOOL_CALL nodes)
         tool_args: Arguments passed to tool (TOOL_CALL nodes)
+        tool_call_id: ID of corresponding TOOL_CALL node (TOOL_RESULT nodes)
         tool_output: Result from tool execution (TOOL_RESULT nodes)
         is_error: Whether tool execution failed (TOOL_RESULT nodes)
         artifact_type: Type of artifact - "code", "file", "json" (ARTIFACT nodes)
@@ -58,6 +59,7 @@ class Content(BaseModel):
     tool_args: dict[str, Any] | None = None
 
     # TOOL_RESULT-specific
+    tool_call_id: UUID | None = None  # ID of the corresponding TOOL_CALL node
     tool_output: Any | None = None
     is_error: bool = False
 
@@ -218,9 +220,11 @@ class ContextNode(BaseModel):
                 if self.content.tool_output is not None
                 else ""
             )
+            # Use stored tool_call_id, falling back to node id for compatibility
+            tool_call_id = self.content.tool_call_id or self.id
             return {
                 "role": "tool",
-                "tool_call_id": str(self.id),
+                "tool_call_id": str(tool_call_id),
                 "content": content,
             }
         elif self.type == NodeType.SYSTEM:

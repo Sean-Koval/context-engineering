@@ -299,6 +299,29 @@ class TestContextNode:
         msg = node.to_message_dict()
         assert msg["role"] == "tool"
         assert msg["content"] == '{"result": 42}'
+        # Without explicit tool_call_id, falls back to node's own ID
+        assert msg["tool_call_id"] == str(node.id)
+
+    def test_to_message_dict_tool_result_with_tool_call_id(self) -> None:
+        """Tool result uses stored tool_call_id when present."""
+        from uuid import uuid4
+
+        # Create a separate ID simulating the corresponding tool call's ID
+        corresponding_tool_call_id = uuid4()
+
+        node = ContextNode(
+            type=NodeType.TOOL_RESULT,
+            content=Content(
+                tool_call_id=corresponding_tool_call_id,
+                tool_output={"result": 42},
+            ),
+        )
+        msg = node.to_message_dict()
+        assert msg["role"] == "tool"
+        assert msg["content"] == '{"result": 42}'
+        # Should use the stored tool_call_id, not the node's own ID
+        assert msg["tool_call_id"] == str(corresponding_tool_call_id)
+        assert msg["tool_call_id"] != str(node.id)
 
     def test_mark_accessed(self) -> None:
         """mark_accessed updates metadata."""

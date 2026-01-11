@@ -197,6 +197,7 @@ class ContextGraph:
         node = ContextNode(
             type=NodeType.TOOL_RESULT,
             content=Content(
+                tool_call_id=tool_call_id,
                 tool_output=output,
                 is_error=is_error,
             ),

@@ -245,6 +245,8 @@ class TestContextGraphConvenienceMethods:
         assert result.type == NodeType.TOOL_RESULT
         assert result.content.tool_output == {"results": [1, 2, 3]}
         assert result.content.is_error is False
+        # Verify tool_call_id is stored for correct OpenAI serialization
+        assert result.content.tool_call_id == call.id
 
         # Check TOOL_IO edge
         edges = g.get_edges(source_id=call.id, edge_type=EdgeType.TOOL_IO)

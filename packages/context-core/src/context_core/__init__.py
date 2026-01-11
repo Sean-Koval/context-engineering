@@ -10,6 +10,20 @@ Provides data structures and abstractions for context management:
 
 from __future__ import annotations
 
+# Budget
+from context_core.budget import TokenBudget
+
+# Entities
+from context_core.entities import (
+    Entity,
+    EntityMention,
+    EntityPattern,
+    EntityTracker,
+    EntityType,
+    NERBackend,
+    get_ner_backend,
+)
+
 # Graph
 from context_core.graph import (
     CompressionLevel,
@@ -22,26 +36,12 @@ from context_core.graph import (
     Role,
 )
 
-# Budget
-from context_core.budget import TokenBudget
-
 # Tokenizer
 from context_core.tokenizer import (
     EstimateTokenizer,
     TiktokenTokenizer,
     Tokenizer,
     get_tokenizer,
-)
-
-# Entities
-from context_core.entities import (
-    Entity,
-    EntityMention,
-    EntityPattern,
-    EntityTracker,
-    EntityType,
-    NERBackend,
-    get_ner_backend,
 )
 
 __version__ = "0.1.0"
