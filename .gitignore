@@ -48,3 +48,4 @@ htmlcov/
 
 # Worktree session tracking
 .worktree-sessions.json
+.serena/
