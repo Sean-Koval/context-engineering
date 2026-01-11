@@ -233,6 +233,94 @@ uv run ty check .
 - Chain API calls with TypeScript
 - Search for tools by description
 
+## Multi-Agent Worktree Management
+
+Use git worktrees to run multiple Claude Code sessions in parallel without conflicts.
+
+### Why Worktrees?
+- **Isolation**: Each agent gets its own working directory
+- **Parallel work**: Multiple agents can build/test independently
+- **Clean coordination**: Merge through normal git flow
+- **No context staleness**: Files match agent's mental model
+
+### Worktree CLI Tool
+
+Located at `scripts/worktree/wt.sh` - manages worktrees with consistent naming.
+
+```bash
+# List all worktrees
+./scripts/worktree/wt.sh list
+
+# Create an agent session (auto-numbered)
+./scripts/worktree/wt.sh create agent
+# Creates: ../context-engineering-agent-session-001
+
+# Create a feature worktree
+./scripts/worktree/wt.sh create feature compression-pipeline --package context-compression
+
+# Check worktree status
+./scripts/worktree/wt.sh status feature compression-pipeline
+
+# Sync with main
+./scripts/worktree/wt.sh sync feature compression-pipeline
+
+# Finish and create PR
+./scripts/worktree/wt.sh finish feature compression-pipeline
+
+# Remove worktree
+./scripts/worktree/wt.sh remove feature compression-pipeline
+```
+
+### Worktree Types
+
+| Type | Purpose | Naming |
+|------|---------|--------|
+| `agent` | Auto-numbered sessions | `agent/session-001` |
+| `feature` | New features | `feature/<name>` |
+| `fix` | Bug fixes | `fix/<issue>` |
+| `experiment` | Experimental work | `experiment/<name>` |
+| `review` | Code review | `review/<pr-num>` |
+
+### Naming Conventions
+
+**Directory**: `{repo}-{type}-{identifier}`
+```
+~/repos/
+├── context-engineering/                    # main worktree
+├── context-engineering-agent-session-001/  # agent session
+├── context-engineering-feature-compression/ # feature work
+└── context-engineering-fix-token-overflow/ # bug fix
+```
+
+**Branch**: `{type}/{identifier}`
+```
+main
+agent/session-001
+feature/compression-pipeline
+fix/token-overflow
+```
+
+### Agent Session Workflow
+
+1. **Start session**: `./scripts/worktree/wt.sh create agent`
+2. **Work in worktree**: `cd ../context-engineering-agent-session-001 && claude`
+3. **Sync periodically**: `./scripts/worktree/wt.sh sync agent session-001`
+4. **Complete work**: `./scripts/worktree/wt.sh finish agent session-001 --pr`
+5. **Cleanup**: `./scripts/worktree/wt.sh remove agent session-001`
+
+### Session Registry
+
+Active sessions tracked in `.worktree-sessions.json` (gitignored).
+View with: `./scripts/worktree/wt.sh sessions`
+
+### Best Practices for Multi-Agent Work
+
+- **One package per agent**: Assign each agent to a specific package
+- **Sync before finish**: Always sync with main before creating PR
+- **Clear task scope**: Define clear boundaries in TASK_BOARD.md
+- **Commit often**: Small, focused commits for easier merges
+- **Use PR reviews**: Let agents review each other's PRs
+
 ## Success Metrics
 
 | Metric | Target |
@@ -262,4 +350,4 @@ Before considering a task complete, Claude should:
 4. **Test**: `uv run pytest`
 
 ---
-*Last updated: 2026-01-09 by Claude*
+*Last updated: 2026-01-10 by Claude*

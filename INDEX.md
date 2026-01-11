@@ -90,13 +90,13 @@ ContextEngine
 ## ✅ Master Checklist
 
 ### Phase 1: Foundation
-- [ ] **context-core/graph**
-  - [ ] ContextNode, Content, NodeMetadata models
-  - [ ] ContextGraph with CRUD operations
-  - [ ] Query by type, entity, time
-  - [ ] Importance scoring
-  - [ ] Subgraph extraction
-  - [ ] Serialization (to_dict, to_messages)
+- [x] **context-core/graph** ✅
+  - [x] ContextNode, Content, NodeMetadata models
+  - [x] ContextGraph with CRUD operations
+  - [x] Query by type, entity, time
+  - [x] Importance scoring
+  - [x] Subgraph extraction
+  - [x] Serialization (to_dict, to_messages)
 - [ ] **context-core/entities**
   - [ ] EntityTracker with NER
   - [ ] Custom pattern extraction
@@ -108,13 +108,20 @@ ContextEngine
   - [ ] ChromaVectorStore
   - [ ] Duplicate detection
   - [ ] Clustering
-- [ ] **context-core/budget**
-  - [ ] TokenBudget with sections
-  - [ ] Pre-rot threshold detection
-  - [ ] Overflow handling
-- [ ] **context-observe (basic)**
-  - [ ] OpenTelemetry tracer
-  - [ ] Prometheus metrics
+- [x] **context-core/budget** ✅
+  - [x] TokenBudget with sections
+  - [x] Pre-rot threshold detection
+  - [x] Overflow handling
+- [x] **context-core/tokenizer** ✅ (bonus: AnthropicTokenizer added)
+  - [x] Tokenizer protocol
+  - [x] TiktokenTokenizer
+  - [x] EstimateTokenizer
+  - [x] get_tokenizer() factory
+- [x] **context-observe (basic)** ✅
+  - [x] OpenTelemetry tracer
+  - [x] Prometheus metrics
+  - [x] ContextEvents with structlog
+  - [x] @traced decorator
 
 ### Phase 2: Compression
 - [ ] **CompressionPipeline**
@@ -227,15 +234,20 @@ These are opportunities for novel contributions:
 ## 🚀 Quick Start For Contributors
 
 ```bash
-# Suggested order for implementation:
-1. Start with context-core/graph (ContextNode, ContextGraph)
-2. Add context-core/budget (TokenBudget)
-3. Implement basic context-observe (tracing)
-4. Build context-compression/pipeline
-5. Add compression strategies one by one
-6. Implement context-memory backends
-7. Add context-tools caching
-8. Build multi-agent last
+# Implementation progress (as of 2026-01-10):
+✅ 1. context-core/graph (ContextNode, ContextGraph) - DONE
+✅ 2. context-core/budget (TokenBudget) - DONE
+✅ 3. context-core/tokenizer (Tokenizer, TiktokenTokenizer, etc.) - DONE
+✅ 4. context-observe (tracing, metrics, events) - DONE
+
+# Next steps:
+5. context-core/entities (EntityTracker with NER)
+6. context-core/semantic (SemanticIndex, vector stores)
+7. Build context-compression/pipeline
+8. Add compression strategies one by one
+9. Implement context-memory backends
+10. Add context-tools caching
+11. Build multi-agent last
 ```
 
 ---
@@ -268,3 +280,7 @@ These are opportunities for novel contributions:
 ---
 
 *This roadmap was designed to be broken into actionable tasks for coding agents. Each spec contains complete, implementable code with type hints, docstrings, and test examples.*
+
+---
+
+*Last Updated: 2026-01-10 | Phase 1 Progress: ~70% (4/6 modules complete)*
