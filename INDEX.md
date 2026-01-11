@@ -97,11 +97,11 @@ ContextEngine
   - [x] Importance scoring
   - [x] Subgraph extraction
   - [x] Serialization (to_dict, to_messages)
-- [ ] **context-core/entities**
-  - [ ] EntityTracker with NER
-  - [ ] Custom pattern extraction
-  - [ ] Entity resolution and merging
-  - [ ] Importance scoring
+- [x] **context-core/entities** ✅
+  - [x] EntityTracker with NER
+  - [x] Custom pattern extraction
+  - [x] Entity resolution and merging
+  - [x] Importance scoring
 - [ ] **context-core/semantic**
   - [ ] SemanticIndex with embedding
   - [ ] InMemoryVectorStore
@@ -239,9 +239,9 @@ These are opportunities for novel contributions:
 ✅ 2. context-core/budget (TokenBudget) - DONE
 ✅ 3. context-core/tokenizer (Tokenizer, TiktokenTokenizer, etc.) - DONE
 ✅ 4. context-observe (tracing, metrics, events) - DONE
+✅ 5. context-core/entities (EntityTracker with NER) - DONE
 
 # Next steps:
-5. context-core/entities (EntityTracker with NER)
 6. context-core/semantic (SemanticIndex, vector stores)
 7. Build context-compression/pipeline
 8. Add compression strategies one by one
@@ -283,4 +283,4 @@ These are opportunities for novel contributions:
 
 ---
 
-*Last Updated: 2026-01-10 | Phase 1 Progress: ~70% (4/6 modules complete)*
+*Last Updated: 2026-01-10 | Phase 1 Progress: ~83% (5/6 modules complete)*
