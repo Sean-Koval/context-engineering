@@ -8,6 +8,7 @@ from context_compression.recovery import RecoveryManifest
 from context_compression.strategies.lossless import (
     CollapseToolChains,
     ExternalizePayloads,
+    FileSystemExternalStorage,
     InMemoryExternalStorage,
 )
 from context_compression.types import CompressionTier
@@ -66,6 +67,110 @@ class TestInMemoryExternalStorage:
 
         storage.store("key1", "content")
         assert len(storage) == 1
+
+
+class TestFileSystemExternalStorage:
+    """Tests for FileSystemExternalStorage."""
+
+    def test_store_and_retrieve(self, tmp_path):
+        """Test storing and retrieving content."""
+        storage = FileSystemExternalStorage(tmp_path)
+
+        uri = storage.store("key1", "test content")
+        assert uri.startswith("file://")
+        assert "key1.txt" in uri
+
+        content = storage.retrieve(uri)
+        assert content == "test content"
+
+    def test_retrieve_nonexistent(self, tmp_path):
+        """Test retrieving non-existent content."""
+        storage = FileSystemExternalStorage(tmp_path)
+        assert storage.retrieve("file:///nonexistent/path.txt") is None
+
+    def test_retrieve_invalid_uri(self, tmp_path):
+        """Test retrieving with invalid URI scheme."""
+        storage = FileSystemExternalStorage(tmp_path)
+        assert storage.retrieve("memory://invalid") is None
+
+    def test_exists(self, tmp_path):
+        """Test checking existence."""
+        storage = FileSystemExternalStorage(tmp_path)
+        uri = storage.store("key1", "content")
+
+        assert storage.exists(uri) is True
+        assert storage.exists("file:///nonexistent.txt") is False
+
+    def test_exists_invalid_uri(self, tmp_path):
+        """Test exists with invalid URI scheme."""
+        storage = FileSystemExternalStorage(tmp_path)
+        assert storage.exists("memory://invalid") is False
+
+    def test_delete(self, tmp_path):
+        """Test deleting content."""
+        storage = FileSystemExternalStorage(tmp_path)
+        uri = storage.store("key1", "content")
+
+        assert storage.delete(uri) is True
+        assert storage.exists(uri) is False
+        assert storage.delete(uri) is False  # Already deleted
+
+    def test_delete_invalid_uri(self, tmp_path):
+        """Test delete with invalid URI scheme."""
+        storage = FileSystemExternalStorage(tmp_path)
+        assert storage.delete("memory://invalid") is False
+
+    def test_creates_directory(self, tmp_path):
+        """Test that storage creates base directory if it doesn't exist."""
+        nested_path = tmp_path / "nested" / "storage" / "path"
+        storage = FileSystemExternalStorage(nested_path)
+
+        assert nested_path.exists()
+        assert storage.base_path == nested_path
+
+    def test_base_path_property(self, tmp_path):
+        """Test base_path property returns resolved path."""
+        storage = FileSystemExternalStorage(tmp_path)
+        assert storage.base_path == tmp_path.resolve()
+
+    def test_store_multiple(self, tmp_path):
+        """Test storing multiple items."""
+        storage = FileSystemExternalStorage(tmp_path)
+
+        uri1 = storage.store("key1", "content1")
+        uri2 = storage.store("key2", "content2")
+        uri3 = storage.store("key3", "content3")
+
+        assert storage.retrieve(uri1) == "content1"
+        assert storage.retrieve(uri2) == "content2"
+        assert storage.retrieve(uri3) == "content3"
+
+    def test_store_with_unicode(self, tmp_path):
+        """Test storing and retrieving unicode content."""
+        storage = FileSystemExternalStorage(tmp_path)
+
+        content = "Hello \u4e16\u754c! \u2b50 \u03b1\u03b2\u03b3"
+        uri = storage.store("unicode_key", content)
+
+        assert storage.retrieve(uri) == content
+
+    def test_store_large_content(self, tmp_path):
+        """Test storing and retrieving large content."""
+        storage = FileSystemExternalStorage(tmp_path)
+
+        large_content = "x" * 1_000_000  # 1MB of content
+        uri = storage.store("large_key", large_content)
+
+        assert storage.retrieve(uri) == large_content
+
+    def test_string_path_init(self, tmp_path):
+        """Test initialization with string path."""
+        str_path = str(tmp_path / "string_init")
+        storage = FileSystemExternalStorage(str_path)
+
+        assert storage.base_path.exists()
+        uri = storage.store("test", "content")
+        assert storage.retrieve(uri) == "content"
 
 
 class TestExternalizePayloads:

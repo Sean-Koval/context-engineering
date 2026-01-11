@@ -10,6 +10,7 @@ from __future__ import annotations
 import hashlib
 import json
 import time
+from pathlib import Path
 from typing import TYPE_CHECKING, Protocol, runtime_checkable
 from uuid import UUID
 
@@ -113,6 +114,109 @@ class InMemoryExternalStorage:
     def __len__(self) -> int:
         """Return number of stored items."""
         return len(self._storage)
+
+
+class FileSystemExternalStorage:
+    """Filesystem-based implementation of ExternalStorage.
+
+    Stores externalized content as files on disk. Each piece of content
+    is stored in a file named after its content hash, enabling deduplication
+    and efficient retrieval.
+
+    The URI format is: file://{absolute_path}
+    """
+
+    def __init__(self, base_path: Path | str) -> None:
+        """Initialize filesystem storage.
+
+        Args:
+            base_path: Base directory for storing files. Will be created
+                       if it doesn't exist.
+        """
+        self._base_path = Path(base_path).resolve()
+        self._base_path.mkdir(parents=True, exist_ok=True)
+        self._uri_prefix = "file://"
+
+    @property
+    def base_path(self) -> Path:
+        """Return the base path for storage."""
+        return self._base_path
+
+    def _uri_to_path(self, uri: str) -> Path | None:
+        """Convert a URI to a filesystem path.
+
+        Args:
+            uri: The file:// URI
+
+        Returns:
+            Path object, or None if URI format is invalid
+        """
+        if not uri.startswith(self._uri_prefix):
+            return None
+        return Path(uri[len(self._uri_prefix) :])
+
+    def store(self, key: str, content: str) -> str:
+        """Store content to filesystem.
+
+        Args:
+            key: Unique key for the content (used as filename)
+            content: The content to store
+
+        Returns:
+            URI that can be used to retrieve the content
+        """
+        file_path = self._base_path / f"{key}.txt"
+        file_path.write_text(content, encoding="utf-8")
+        return f"{self._uri_prefix}{file_path}"
+
+    def retrieve(self, uri: str) -> str | None:
+        """Retrieve content from filesystem.
+
+        Args:
+            uri: The URI from store()
+
+        Returns:
+            The stored content, or None if not found or error occurs
+        """
+        file_path = self._uri_to_path(uri)
+        if file_path is None:
+            return None
+
+        try:
+            return file_path.read_text(encoding="utf-8")
+        except (FileNotFoundError, OSError):
+            return None
+
+    def delete(self, uri: str) -> bool:
+        """Delete content from filesystem.
+
+        Args:
+            uri: The URI to delete
+
+        Returns:
+            True if deleted, False if not found or error occurs
+        """
+        file_path = self._uri_to_path(uri)
+        if file_path is None:
+            return False
+
+        try:
+            file_path.unlink()
+            return True
+        except (FileNotFoundError, OSError):
+            return False
+
+    def exists(self, uri: str) -> bool:
+        """Check if content exists on filesystem.
+
+        Args:
+            uri: The URI to check
+
+        Returns:
+            True if content exists
+        """
+        file_path = self._uri_to_path(uri)
+        return file_path is not None and file_path.exists()
 
 
 class ExternalizePayloads(BaseCompressionStrategy):
