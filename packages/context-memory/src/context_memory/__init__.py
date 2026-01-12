@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from context_memory.store import MemoryStore
 from context_memory.types import (
     RetrievalResult,
     StorageKey,
@@ -11,6 +12,9 @@ from context_memory.types import (
 )
 
 __all__ = [
+    # Protocol
+    "MemoryStore",
+    # Types
     "StorageTier",
     "StorageKey",
     "StorageMetadata",
