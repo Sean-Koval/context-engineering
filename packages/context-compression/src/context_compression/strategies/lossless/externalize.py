@@ -216,10 +216,7 @@ class FileSystemExternalStorage:
             True if content exists
         """
         file_path = self._uri_to_path(uri)
-        if file_path is None:
-            return False
-
-        return file_path.exists()
+        return file_path is not None and file_path.exists()
 
 
 class ExternalizePayloads(BaseCompressionStrategy):
