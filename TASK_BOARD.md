@@ -194,7 +194,7 @@
 | CS-005 | Implement `EntityCentricCompression._split_sentences()` | 2 | - | ✅ | Claude |
 | CS-006 | Implement `EntityCentricCompression._sentence_has_entity()` | 2 | CS-005 | ✅ | Claude |
 | CS-007 | Implement `EntityCentricCompression.compress()` | 6 | CS-005, CS-006, ET-* | ✅ | Claude |
-| CS-008 | Implement `TaskRelevanceCompression` (placeholder LLM) | 6 | - | ⬜ | |
+| CS-008 | Implement `TaskRelevanceCompression` (placeholder LLM) | 6 | - | ✅ | Claude |
 | CS-009 | Write unit tests for compaction strategies | 8 | CS-001-CS-008 | ⬜ | |
 
 **Week 10 Subtotal**: 37 hours
