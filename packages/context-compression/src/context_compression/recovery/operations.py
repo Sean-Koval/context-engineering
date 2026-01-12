@@ -190,6 +190,35 @@ class EvictOperation(BaseOperation):
         return self.external_ref is not None
 
 
+class TaskRelevanceOperation(BaseOperation):
+    """Tracks task relevance compression operations.
+
+    When content is determined to be off-task based on semantic similarity,
+    it is compressed to a brief summary. The original content is stored
+    for potential recovery.
+
+    Attributes:
+        op_type: Discriminator for operation type
+        relevance_score: Computed relevance score (0.0-1.0)
+        task_context_preview: First 100 chars of the task context used
+        original_content: The original content before compression
+        compressed_content: The compressed summary content
+        compressed_tokens: Token count after compression
+    """
+
+    op_type: Literal["task_relevance"] = "task_relevance"
+    relevance_score: float = Field(ge=0.0, le=1.0)
+    task_context_preview: str = ""
+    original_content: str = ""
+    compressed_content: str = ""
+    compressed_tokens: int = Field(ge=0)
+
+    @property
+    def is_recoverable(self) -> bool:
+        """Task relevance compression is recoverable if original is stored."""
+        return bool(self.original_content)
+
+
 # Union type for all compression operations with discriminator
 CompressionOperation = Annotated[
     ExternalizeOperation
@@ -197,6 +226,7 @@ CompressionOperation = Annotated[
     | CollapseOperation
     | CompactOperation
     | SummarizeOperation
-    | EvictOperation,
+    | EvictOperation
+    | TaskRelevanceOperation,
     Field(discriminator="op_type"),
 ]

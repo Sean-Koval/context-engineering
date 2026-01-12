@@ -20,6 +20,7 @@ from context_compression.recovery.operations import (
     EvictOperation,
     ExternalizeOperation,
     SummarizeOperation,
+    TaskRelevanceOperation,
 )
 
 
@@ -359,6 +360,7 @@ class RecoveryManifest(BaseModel):
             "compact": CompactOperation,
             "summarize": SummarizeOperation,
             "evict": EvictOperation,
+            "task_relevance": TaskRelevanceOperation,
         }
 
         operations = []
