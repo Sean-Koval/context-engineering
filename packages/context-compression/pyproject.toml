@@ -5,6 +5,7 @@ description = "Compression pipeline for ContextEngine"
 requires-python = ">=3.12"
 dependencies = [
     "pydantic>=2.0",
+    "context-core",
 ]
 
 [project.optional-dependencies]
@@ -20,6 +21,9 @@ include = ["src/context_compression"]
 [tool.hatch.build.targets.wheel]
 packages = ["src/context_compression"]
 sources = ["src"]
+
+[tool.uv.sources]
+context-core = { workspace = true }
 
 [dependency-groups]
 dev = [

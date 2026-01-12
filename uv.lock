@@ -192,6 +192,7 @@ name = "context-compression"
 version = "0.1.0"
 source = { editable = "packages/context-compression" }
 dependencies = [
+    { name = "context-core" },
     { name = "pydantic" },
 ]
 
@@ -209,6 +210,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "context-core", editable = "packages/context-core" },
     { name = "pydantic", specifier = ">=2.0" },
     { name = "sentence-transformers", marker = "extra == 'semantic'", specifier = ">=2.2" },
 ]
