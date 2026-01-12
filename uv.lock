@@ -202,6 +202,7 @@ semantic = [
 
 [package.dev-dependencies]
 dev = [
+    { name = "numpy" },
     { name = "pytest" },
     { name = "pytest-cov" },
 ]
@@ -215,6 +216,7 @@ provides-extras = ["semantic"]
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "numpy", specifier = ">=2.4.0" },
     { name = "pytest", specifier = ">=9.0.2" },
     { name = "pytest-cov", specifier = ">=4.0" },
 ]

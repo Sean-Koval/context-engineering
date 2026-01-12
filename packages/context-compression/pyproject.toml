@@ -23,6 +23,7 @@ sources = ["src"]
 
 [dependency-groups]
 dev = [
+    "numpy>=2.4.0",
     "pytest>=9.0.2",
     "pytest-cov>=4.0",
 ]
