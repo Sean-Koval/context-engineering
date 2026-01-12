@@ -514,3 +514,487 @@ class TestSchemaCompression:
                 assert node.content.compressed_tokens is not None
                 # Original tokens should be stored
                 assert node.content.original_tokens is not None
+
+
+class TestEntityCentricCompression:
+    """Tests for EntityCentricCompression strategy."""
+
+    @pytest.fixture
+    def entity_tracker(self):
+        """Create an EntityTracker with some entities."""
+        from uuid import uuid4
+
+        from context_core.entities.tracker import EntityTracker
+        from context_core.entities.types import Entity, EntityType
+
+        tracker = EntityTracker()
+
+        # Add some entities directly to the tracker
+        entity1 = Entity(
+            type=EntityType.PERSON,
+            canonical_name="Alice",
+            importance=0.8,
+            aliases={"alice"},
+        )
+        entity1.node_ids.add(uuid4())
+        tracker._entities[entity1.id] = entity1
+        tracker._name_index["alice"] = entity1.id
+        tracker._type_index[EntityType.PERSON] = {entity1.id}
+
+        entity2 = Entity(
+            type=EntityType.FILE_PATH,
+            canonical_name="/src/main.py",
+            importance=0.7,
+            aliases={"main.py"},
+        )
+        entity2.node_ids.add(uuid4())
+        tracker._entities[entity2.id] = entity2
+        tracker._name_index["/src/main.py"] = entity2.id
+        if EntityType.FILE_PATH not in tracker._type_index:
+            tracker._type_index[EntityType.FILE_PATH] = set()
+        tracker._type_index[EntityType.FILE_PATH].add(entity2.id)
+
+        entity3 = Entity(
+            type=EntityType.ORGANIZATION,
+            canonical_name="Anthropic",
+            importance=0.6,
+            aliases={"anthropic"},
+        )
+        entity3.node_ids.add(uuid4())
+        tracker._entities[entity3.id] = entity3
+        tracker._name_index["anthropic"] = entity3.id
+        if EntityType.ORGANIZATION not in tracker._type_index:
+            tracker._type_index[EntityType.ORGANIZATION] = set()
+        tracker._type_index[EntityType.ORGANIZATION].add(entity3.id)
+
+        return tracker
+
+    @pytest.fixture
+    def strategy(self, entity_tracker):
+        """Create strategy with default settings."""
+        from context_compression.strategies.compaction import EntityCentricCompression
+
+        return EntityCentricCompression(entity_tracker=entity_tracker)
+
+    @pytest.fixture
+    def graph_with_messages(self):
+        """Create graph with MESSAGE nodes containing text."""
+        graph = ContextGraph()
+
+        # Add messages with various content
+        msg1 = graph.add_message(
+            "user",
+            "Hello! I met Alice yesterday. She works at Anthropic. "
+            "The weather was nice. I enjoyed our conversation.",
+        )
+        msg1.token_count = 50
+
+        msg2 = graph.add_message(
+            "assistant",
+            "That's interesting! I heard about their work. "
+            "How did your meeting go? Did you discuss the project?",
+        )
+        msg2.token_count = 40
+
+        msg3 = graph.add_message(
+            "user",
+            "Alice mentioned /src/main.py needs refactoring. "
+            "The coffee shop was crowded. Anthropic has great engineers.",
+        )
+        msg3.token_count = 60
+
+        return graph
+
+    @pytest.fixture
+    def graph_with_tool_results(self):
+        """Create graph with TOOL_RESULT nodes containing text."""
+        graph = ContextGraph()
+
+        call1 = graph.add_tool_call("read_file", {"path": "/src/main.py"})
+        result1 = graph.add_tool_result(
+            call1.id,
+            "File contents show Alice wrote this module. "
+            "It has good documentation. The tests are passing.",
+        )
+        result1.token_count = 40
+
+        call2 = graph.add_tool_call("search", {"query": "Anthropic"})
+        result2 = graph.add_tool_result(
+            call2.id,
+            "Found 3 results. The first result mentions Anthropic directly. "
+            "Other results are unrelated. Some noise in the data.",
+        )
+        result2.token_count = 45
+
+        return graph
+
+    def test_strategy_properties(self, strategy):
+        """Test strategy properties."""
+        assert strategy.name == "entity_centric"
+        assert strategy.tier == CompressionTier.COMPACTION
+        assert strategy.priority == 20
+
+    def test_split_sentences_basic(self, strategy):
+        """Test sentence splitting on basic text."""
+        text = "Hello world. This is a test. Another sentence!"
+        sentences = strategy._split_sentences(text)
+
+        assert len(sentences) == 3
+        assert "Hello world" in sentences[0]
+        assert "This is a test" in sentences[1]
+        assert "Another sentence" in sentences[2]
+
+    def test_split_sentences_empty(self, strategy):
+        """Test sentence splitting on empty text."""
+        assert strategy._split_sentences("") == []
+        assert strategy._split_sentences("   ") == []
+        assert strategy._split_sentences(None) == []
+
+    def test_split_sentences_no_punctuation(self, strategy):
+        """Test sentence splitting on text without clear boundaries."""
+        text = "This is a long sentence without clear boundaries"
+        sentences = strategy._split_sentences(text)
+
+        assert len(sentences) == 1
+        assert sentences[0] == text
+
+    def test_split_sentences_question(self, strategy):
+        """Test sentence splitting with questions."""
+        text = "What is this? It is a test. Are you sure?"
+        sentences = strategy._split_sentences(text)
+
+        assert len(sentences) == 3
+
+    def test_split_sentences_exclamation(self, strategy):
+        """Test sentence splitting with exclamations."""
+        text = "Wow! That's amazing! I can't believe it."
+        sentences = strategy._split_sentences(text)
+
+        assert len(sentences) == 3
+
+    def test_sentence_has_entity_match(self, strategy):
+        """Test entity detection in sentence - match case."""
+        entities = {"Alice", "Bob", "main.py"}
+
+        assert strategy._sentence_has_entity("Alice went home.", entities) is True
+        assert strategy._sentence_has_entity("I met Bob.", entities) is True
+        assert strategy._sentence_has_entity("Check main.py please.", entities) is True
+
+    def test_sentence_has_entity_no_match(self, strategy):
+        """Test entity detection in sentence - no match case."""
+        entities = {"Alice", "Bob", "main.py"}
+
+        assert strategy._sentence_has_entity("The weather is nice.", entities) is False
+        assert strategy._sentence_has_entity("", entities) is False
+
+    def test_sentence_has_entity_case_insensitive(self, strategy):
+        """Test entity detection is case-insensitive."""
+        entities = {"Alice", "main.py"}
+
+        assert strategy._sentence_has_entity("ALICE said hello.", entities) is True
+        assert strategy._sentence_has_entity("alice is here.", entities) is True
+        assert strategy._sentence_has_entity("Modify MAIN.PY now.", entities) is True
+
+    def test_sentence_has_entity_empty(self, strategy):
+        """Test entity detection with empty inputs."""
+        assert strategy._sentence_has_entity("Hello.", set()) is False
+        assert strategy._sentence_has_entity("", {"Alice"}) is False
+
+    def test_get_important_entity_names(self, strategy):
+        """Test getting important entity names."""
+        names = strategy._get_important_entity_names()
+
+        assert "Alice" in names
+        assert "/src/main.py" in names
+        assert "Anthropic" in names
+        # Should include aliases
+        assert "alice" in names or "main.py" in names
+
+    def test_get_important_entity_names_min_threshold(self, entity_tracker):
+        """Test important entity filtering by threshold."""
+        from context_compression.strategies.compaction import EntityCentricCompression
+
+        # Create strategy with high threshold
+        strategy = EntityCentricCompression(
+            entity_tracker=entity_tracker, min_importance=0.75
+        )
+
+        names = strategy._get_important_entity_names()
+
+        # Only Alice (0.8) should pass 0.75 threshold
+        assert "Alice" in names
+        # Anthropic (0.6) should not pass
+        assert "Anthropic" not in names
+
+    def test_compress_with_messages(self, strategy, graph_with_messages):
+        """Test compression with MESSAGE nodes."""
+        from context_compression.recovery import RecoveryManifest
+
+        manifest = RecoveryManifest()
+        result = strategy.compress(graph_with_messages, manifest)
+
+        assert result.success is True
+        assert result.strategy_name == "entity_centric"
+        assert result.tier == CompressionTier.COMPACTION
+        # Should have compressed at least one node
+        assert result.nodes_compressed >= 1
+
+    def test_compress_logs_compact_operation(self, strategy, graph_with_messages):
+        """Test that compression logs CompactOperation to manifest."""
+        from context_compression.recovery import RecoveryManifest
+
+        manifest = RecoveryManifest()
+        strategy.compress(graph_with_messages, manifest)
+
+        # Should have logged operations
+        assert len(manifest.operations) >= 1
+
+        # Check operation type
+        for op in manifest.operations:
+            assert op.op_type == "compact"
+            assert op.compaction_method == "entity_centric"
+
+    def test_compress_updates_node_compression_level(
+        self, strategy, graph_with_messages
+    ):
+        """Test that compression updates node compression level."""
+        from context_compression.recovery import RecoveryManifest
+
+        manifest = RecoveryManifest()
+        strategy.compress(graph_with_messages, manifest)
+
+        # Check that at least one message was compressed
+        compressed_count = 0
+        for node in graph_with_messages:
+            if (
+                node.type == NodeType.MESSAGE
+                and node.compression_level == CompressionLevel.COMPACTED
+            ):
+                compressed_count += 1
+
+        assert compressed_count >= 1
+
+    def test_compress_preserves_entity_sentences(self, strategy, graph_with_messages):
+        """Test that compression preserves entity-containing sentences."""
+        from context_compression.recovery import RecoveryManifest
+
+        manifest = RecoveryManifest()
+        strategy.compress(graph_with_messages, manifest)
+
+        # Find compressed message nodes and check content
+        for node in graph_with_messages:
+            if (
+                node.type == NodeType.MESSAGE
+                and node.compression_level == CompressionLevel.COMPACTED
+            ):
+                text = node.content.text or ""
+                # Entity mentions should be preserved in compressed text
+                # At least one entity should be present
+                has_alice = "alice" in text.lower()
+                has_anthropic = "anthropic" in text.lower()
+                has_main_py = "main.py" in text.lower()
+                assert has_alice or has_anthropic or has_main_py
+
+    def test_compress_tool_results(self, strategy, graph_with_tool_results):
+        """Test compression of TOOL_RESULT nodes with text content."""
+        from context_compression.recovery import RecoveryManifest
+
+        manifest = RecoveryManifest()
+        result = strategy.compress(graph_with_tool_results, manifest)
+
+        assert result.success is True
+        # Should handle tool results with string output
+        assert result.nodes_processed > 0
+
+    def test_skips_pinned_nodes(self, strategy, graph_with_messages):
+        """Test compression skips pinned nodes."""
+        from context_compression.recovery import RecoveryManifest
+
+        # Pin all message nodes
+        for node in graph_with_messages:
+            if node.type == NodeType.MESSAGE:
+                node.metadata.pinned = True
+
+        manifest = RecoveryManifest()
+        result = strategy.compress(graph_with_messages, manifest)
+
+        assert result.nodes_compressed == 0
+
+    def test_skips_already_compressed_nodes(self, strategy, graph_with_messages):
+        """Test compression skips already compressed nodes."""
+        from context_compression.recovery import RecoveryManifest
+
+        # Mark all message nodes as already compressed
+        for node in graph_with_messages:
+            if node.type == NodeType.MESSAGE:
+                node.compression_level = CompressionLevel.COMPACTED
+
+        manifest = RecoveryManifest()
+        result = strategy.compress(graph_with_messages, manifest)
+
+        assert result.nodes_compressed == 0
+
+    def test_skips_json_tool_results(self, strategy):
+        """Test compression skips JSON/dict tool results."""
+        from context_compression.recovery import RecoveryManifest
+
+        graph = ContextGraph()
+
+        # Add tool results with JSON content (should be handled by SchemaCompression)
+        call = graph.add_tool_call("get_data", {})
+        result = graph.add_tool_result(call.id, {"data": [1, 2, 3]})
+        result.token_count = 30
+
+        manifest = RecoveryManifest()
+        compression_result = strategy.compress(graph, manifest)
+
+        # JSON content should be skipped
+        assert compression_result.nodes_compressed == 0
+
+    def test_estimate_savings(self, strategy, graph_with_messages):
+        """Test savings estimation."""
+        savings = strategy.estimate_savings(graph_with_messages)
+
+        # Should estimate some savings (may be 0 if no content can be removed)
+        assert savings >= 0
+
+    def test_estimate_savings_empty_graph(self, strategy):
+        """Test savings estimation on empty graph."""
+        graph = ContextGraph()
+        savings = strategy.estimate_savings(graph)
+        assert savings == 0
+
+    def test_can_apply_with_eligible_nodes(self, strategy, graph_with_messages):
+        """Test can_apply returns True for eligible graph."""
+        # Can apply should return True since we have entities and text content
+        assert strategy.can_apply(graph_with_messages) is True
+
+    def test_can_apply_empty_graph(self, strategy):
+        """Test can_apply returns False for empty graph."""
+        graph = ContextGraph()
+        assert strategy.can_apply(graph) is False
+
+    def test_can_apply_no_entities(self, graph_with_messages):
+        """Test can_apply returns False when no important entities."""
+        from context_compression.strategies.compaction import EntityCentricCompression
+        from context_core.entities.tracker import EntityTracker
+
+        # Create tracker with no entities
+        empty_tracker = EntityTracker()
+        strategy = EntityCentricCompression(entity_tracker=empty_tracker)
+
+        assert strategy.can_apply(graph_with_messages) is False
+
+    def test_compress_respects_target_tokens(self, strategy):
+        """Test compression respects target tokens limit."""
+        from context_compression.recovery import RecoveryManifest
+
+        graph = ContextGraph()
+
+        # Add many messages with content
+        for i in range(10):
+            msg = graph.add_message(
+                "user",
+                f"Message {i} mentions Alice and her work. "
+                "The weather is nice today. It's a beautiful day. "
+                "Other random content here.",
+            )
+            msg.token_count = 50
+
+        manifest = RecoveryManifest()
+        # Set a low target to stop early
+        result = strategy.compress(graph, manifest, target_tokens=20)
+
+        # Should have stopped before processing all nodes
+        assert result.nodes_compressed < 10
+
+    def test_compress_with_target_node_ids(self, strategy, graph_with_messages):
+        """Test compression targeting specific nodes."""
+        from context_compression.recovery import RecoveryManifest
+
+        # Get first message node ID
+        message_nodes = [
+            node for node in graph_with_messages if node.type == NodeType.MESSAGE
+        ]
+        target_ids = [message_nodes[0].id]
+
+        manifest = RecoveryManifest()
+        result = strategy.compress(
+            graph_with_messages, manifest, target_node_ids=target_ids
+        )
+
+        # Should only process targeted nodes
+        assert result.nodes_compressed <= 1
+
+    def test_result_is_not_recoverable(self, strategy, graph_with_messages):
+        """Test that compression result marks as not recoverable (compaction)."""
+        from context_compression.recovery import RecoveryManifest
+
+        manifest = RecoveryManifest()
+        result = strategy.compress(graph_with_messages, manifest)
+
+        # Compaction is not fully recoverable
+        assert result.is_recoverable is False
+
+    def test_compress_updates_token_counts(self, strategy, graph_with_messages):
+        """Test that compression updates token counts on nodes."""
+        from context_compression.recovery import RecoveryManifest
+
+        manifest = RecoveryManifest()
+        strategy.compress(graph_with_messages, manifest)
+
+        # Check that compressed nodes have updated token counts
+        for node in graph_with_messages:
+            if (
+                node.type == NodeType.MESSAGE
+                and node.compression_level == CompressionLevel.COMPACTED
+            ):
+                # Compressed token count should be set
+                assert node.content.compressed_tokens is not None
+                # Original tokens should be stored
+                assert node.content.original_tokens is not None
+
+    def test_include_context_sentences(self, entity_tracker):
+        """Test including adjacent sentences for context."""
+        from context_compression.recovery import RecoveryManifest
+        from context_compression.strategies.compaction import EntityCentricCompression
+
+        strategy = EntityCentricCompression(
+            entity_tracker=entity_tracker, include_context_sentences=True
+        )
+
+        graph = ContextGraph()
+        msg = graph.add_message(
+            "user", "First sentence. Alice said hello. Third sentence."
+        )
+        msg.token_count = 30
+
+        manifest = RecoveryManifest()
+        strategy.compress(graph, manifest)
+
+        # With context sentences enabled, adjacent sentences should be kept
+        for node in graph:
+            if node.compression_level == CompressionLevel.COMPACTED:
+                text = node.content.text or ""
+                # Should keep "Alice said hello" and potentially adjacent
+                assert "alice" in text.lower()
+
+    def test_compress_text_removes_irrelevant(self, strategy):
+        """Test that _compress_text removes irrelevant sentences."""
+        entity_names = {"Alice", "/src/main.py"}
+
+        text = (
+            "Alice is working on the project. "
+            "The weather is nice today. "
+            "Check /src/main.py for details. "
+            "Random unrelated content here."
+        )
+
+        compressed, preserved, removed = strategy._compress_text(text, entity_names)
+
+        # Should keep Alice and main.py sentences
+        assert len(preserved) == 2
+        # Should remove weather and random sentences
+        assert len(removed) == 2
+        # Compressed text should be shorter
+        assert len(compressed) < len(text)
