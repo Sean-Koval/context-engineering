@@ -129,12 +129,13 @@ ContextEngine
   - [x] Priority ordering
   - [x] Preservation logic
   - [x] Dry-run preview
-- [ ] **Lossless Strategies** (2/3 complete)
+- [x] **Lossless Strategies** ✅
   - [x] ExternalizePayloads ✅
+  - [x] FileSystemExternalStorage ✅
   - [ ] DeduplicateSemantically
   - [x] CollapseToolChains ✅
-- [ ] **Compaction Strategies**
-  - [ ] SchemaCompression
+- [ ] **Compaction Strategies** (1/3 complete)
+  - [x] SchemaCompression ✅
   - [ ] EntityCentricCompression
   - [ ] TaskRelevanceCompression
 - [ ] **Summarization Strategies**
@@ -243,17 +244,19 @@ These are opportunities for novel contributions:
 ✅ 6. context-core/semantic (SemanticIndex, vector stores) - DONE
 ✅ 7. context-compression/pipeline (CompressionPipeline, RecoveryManifest) - DONE
 ✅ 8. context-compression/lossless (ExternalizePayloads, CollapseToolChains) - DONE
+✅ 9. context-compression/lossless (FileSystemExternalStorage) - DONE
+✅ 10. context-compression/compaction (SchemaCompression) - DONE
 
 # Phase 1: COMPLETE ✅
-# Phase 2: IN PROGRESS (~40%)
+# Phase 2: IN PROGRESS (~55%)
 
 # Next steps:
-9. DeduplicateSemantically strategy
-10. Compaction strategies (Schema, EntityCentric, TaskRelevance)
-11. Summarization strategies (Hierarchical, TaskAware, Incremental)
-12. Implement context-memory backends
-13. Add context-tools caching
-14. Build multi-agent last
+11. DeduplicateSemantically strategy
+12. Compaction strategies (EntityCentric, TaskRelevance)
+13. Summarization strategies (Hierarchical, TaskAware, Incremental)
+14. Implement context-memory backends
+15. Add context-tools caching
+16. Build multi-agent last
 ```
 
 ---
@@ -289,4 +292,4 @@ These are opportunities for novel contributions:
 
 ---
 
-*Last Updated: 2026-01-11 | Phase 1: COMPLETE ✅ | Phase 2: ~40% (pipeline + 2 lossless strategies)*
+*Last Updated: 2026-01-12 | Phase 1: COMPLETE ✅ | Phase 2: ~55% (pipeline + lossless + SchemaCompression)*
