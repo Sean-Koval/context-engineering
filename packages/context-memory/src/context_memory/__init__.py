@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from context_memory.backends import FileSystemStore
 from context_memory.store import MemoryStore
 from context_memory.types import (
     RetrievalResult,
@@ -14,6 +15,8 @@ from context_memory.types import (
 __all__ = [
     # Protocol
     "MemoryStore",
+    # Backends
+    "FileSystemStore",
     # Types
     "StorageTier",
     "StorageKey",

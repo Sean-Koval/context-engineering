@@ -53,9 +53,7 @@ class TestMemoryStoreProtocol:
             async def retrieve(self, key: StorageKey) -> Any | None:
                 return None
 
-            async def retrieve_batch(
-                self, keys: list[StorageKey]
-            ) -> list[Any | None]:
+            async def retrieve_batch(self, keys: list[StorageKey]) -> list[Any | None]:
                 return [None] * len(keys)
 
             async def delete(self, key: StorageKey) -> bool:
@@ -140,9 +138,7 @@ class TestMemoryStoreProtocol:
             async def retrieve(self, key: StorageKey) -> Any | None:
                 return None
 
-            async def retrieve_batch(
-                self, keys: list[StorageKey]
-            ) -> list[Any | None]:
+            async def retrieve_batch(self, keys: list[StorageKey]) -> list[Any | None]:
                 return []
 
             async def delete(self, key: StorageKey) -> bool:
