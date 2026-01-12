@@ -3,12 +3,16 @@
 Compaction strategies reduce content while preserving key information.
 They are mostly reversible - structure is known but some data may be lost.
 
-Strategies (to be implemented):
-- SchemaCompression: Extract JSON schemas
-- EntityCentricCompression: Preserve entity context
-- TaskRelevanceCompression: Remove off-task content
+Strategies:
+- SchemaCompression: Extract JSON schemas from repeated structures
+- EntityCentricCompression: Preserve entity context (to be implemented)
+- TaskRelevanceCompression: Remove off-task content (to be implemented)
 """
 
 from __future__ import annotations
 
-__all__: list[str] = []
+from context_compression.strategies.compaction.schema import SchemaCompression
+
+__all__: list[str] = [
+    "SchemaCompression",
+]
