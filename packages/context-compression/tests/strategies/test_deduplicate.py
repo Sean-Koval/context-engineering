@@ -105,6 +105,23 @@ class DeterministicEmbeddingModel:
         )
 
 
+def _create_node_with_text(
+    text: str,
+    token_count: int = 100,
+    importance: float = 0.5,
+    sequence_number: int | None = None,
+) -> ContextNode:
+    """Helper to create a node with specific text content."""
+    return ContextNode(
+        id=uuid4(),
+        type=NodeType.MESSAGE,
+        content=Content(text=text, role=None),
+        metadata=NodeMetadata(importance=importance),
+        token_count=token_count,
+        sequence_number=sequence_number,
+    )
+
+
 class TestDeduplicateSemanticallyProperties:
     """Tests for DeduplicateSemantically strategy properties."""
 
@@ -164,24 +181,6 @@ class TestDeduplicateSemantically:
             prefer_recent=True,
         )
 
-    def _create_node_with_text(
-        self,
-        text: str,
-        token_count: int = 100,
-        importance: float = 0.5,
-        sequence_number: int | None = None,
-    ) -> ContextNode:
-        """Helper to create a node with specific text content."""
-        node = ContextNode(
-            id=uuid4(),
-            type=NodeType.MESSAGE,
-            content=Content(text=text, role=None),
-            metadata=NodeMetadata(importance=importance),
-            token_count=token_count,
-            sequence_number=sequence_number,
-        )
-        return node
-
     def test_deduplicate_finds_similar_nodes(
         self,
         model: DeterministicEmbeddingModel,
@@ -198,8 +197,8 @@ class TestDeduplicateSemantically:
         model.set_identical_texts([text1, text2])
 
         # Create nodes
-        node1 = self._create_node_with_text(text1, token_count=100, sequence_number=0)
-        node2 = self._create_node_with_text(text2, token_count=100, sequence_number=1)
+        node1 = _create_node_with_text(text1, token_count=100, sequence_number=0)
+        node2 = _create_node_with_text(text2, token_count=100, sequence_number=1)
 
         graph.add_node(node1, connect_temporal=False)
         graph.add_node(node2, connect_temporal=False)
@@ -231,11 +230,11 @@ class TestDeduplicateSemantically:
         model.set_identical_texts([text1, text2])
 
         # Node 1: older but higher importance
-        node1 = self._create_node_with_text(
+        node1 = _create_node_with_text(
             text1, token_count=100, importance=0.9, sequence_number=0
         )
         # Node 2: newer but lower importance
-        node2 = self._create_node_with_text(
+        node2 = _create_node_with_text(
             text2, token_count=100, importance=0.3, sequence_number=1
         )
 
@@ -276,9 +275,9 @@ class TestDeduplicateSemantically:
         # Set them all as similar
         model.set_similar_texts([text_a, text_b, text_c], similarity=0.95)
 
-        node_a = self._create_node_with_text(text_a, token_count=100, sequence_number=0)
-        node_b = self._create_node_with_text(text_b, token_count=100, sequence_number=1)
-        node_c = self._create_node_with_text(text_c, token_count=100, sequence_number=2)
+        node_a = _create_node_with_text(text_a, token_count=100, sequence_number=0)
+        node_b = _create_node_with_text(text_b, token_count=100, sequence_number=1)
+        node_c = _create_node_with_text(text_c, token_count=100, sequence_number=2)
 
         for node in [node_a, node_b, node_c]:
             graph.add_node(node, connect_temporal=False)
@@ -315,7 +314,7 @@ class TestDeduplicateSemantically:
 
         nodes = []
         for i, text in enumerate(texts):
-            node = self._create_node_with_text(text, token_count=100, sequence_number=i)
+            node = _create_node_with_text(text, token_count=100, sequence_number=i)
             nodes.append(node)
             graph.add_node(node, connect_temporal=False)
             semantic_index.index_node(node)
@@ -350,8 +349,8 @@ class TestDeduplicateSemantically:
         model.set_similar_texts([text1, text2], similarity=0.98)
 
         # Create nodes with token count below threshold
-        node1 = self._create_node_with_text(text1, token_count=50, sequence_number=0)
-        node2 = self._create_node_with_text(text2, token_count=50, sequence_number=1)
+        node1 = _create_node_with_text(text1, token_count=50, sequence_number=0)
+        node2 = _create_node_with_text(text2, token_count=50, sequence_number=1)
 
         graph.add_node(node1, connect_temporal=False)
         graph.add_node(node2, connect_temporal=False)
@@ -380,8 +379,8 @@ class TestDeduplicateSemantically:
 
         model.set_similar_texts([text1, text2], similarity=0.97)
 
-        node1 = self._create_node_with_text(text1, token_count=100, sequence_number=0)
-        node2 = self._create_node_with_text(text2, token_count=100, sequence_number=1)
+        node1 = _create_node_with_text(text1, token_count=100, sequence_number=0)
+        node2 = _create_node_with_text(text2, token_count=100, sequence_number=1)
 
         graph.add_node(node1, connect_temporal=False)
         graph.add_node(node2, connect_temporal=False)
@@ -416,8 +415,8 @@ class TestDeduplicateSemantically:
 
         model.set_similar_texts([text1, text2], similarity=0.95)
 
-        node1 = self._create_node_with_text(text1, token_count=150, sequence_number=0)
-        node2 = self._create_node_with_text(text2, token_count=150, sequence_number=1)
+        node1 = _create_node_with_text(text1, token_count=150, sequence_number=0)
+        node2 = _create_node_with_text(text2, token_count=150, sequence_number=1)
 
         graph.add_node(node1, connect_temporal=False)
         graph.add_node(node2, connect_temporal=False)
@@ -448,9 +447,9 @@ class TestDeduplicateSemantically:
         model.set_similar_texts([text1, text2], similarity=0.96)
         # text3 will get a random embedding (dissimilar)
 
-        node1 = self._create_node_with_text(text1, token_count=100, sequence_number=0)
-        node2 = self._create_node_with_text(text2, token_count=100, sequence_number=1)
-        node3 = self._create_node_with_text(text3, token_count=100, sequence_number=2)
+        node1 = _create_node_with_text(text1, token_count=100, sequence_number=0)
+        node2 = _create_node_with_text(text2, token_count=100, sequence_number=1)
+        node3 = _create_node_with_text(text3, token_count=100, sequence_number=2)
 
         for node in [node1, node2, node3]:
             graph.add_node(node, connect_temporal=False)
@@ -500,7 +499,7 @@ class TestDeduplicateSemantically:
         ]
 
         for i, text in enumerate(texts):
-            node = self._create_node_with_text(text, token_count=100, sequence_number=i)
+            node = _create_node_with_text(text, token_count=100, sequence_number=i)
             graph.add_node(node, connect_temporal=False)
             semantic_index.index_node(node)
 
@@ -525,10 +524,10 @@ class TestDeduplicateSemantically:
 
         model.set_similar_texts([text1, text2], similarity=0.98)
 
-        node1 = self._create_node_with_text(text1, token_count=100, sequence_number=0)
+        node1 = _create_node_with_text(text1, token_count=100, sequence_number=0)
         node1.metadata.pinned = True  # Pin this node
 
-        node2 = self._create_node_with_text(text2, token_count=100, sequence_number=1)
+        node2 = _create_node_with_text(text2, token_count=100, sequence_number=1)
         node2.metadata.pinned = True  # Pin this node too
 
         graph.add_node(node1, connect_temporal=False)
@@ -558,10 +557,10 @@ class TestDeduplicateSemantically:
 
         model.set_similar_texts([text1, text2], similarity=0.97)
 
-        node1 = self._create_node_with_text(text1, token_count=100, sequence_number=0)
+        node1 = _create_node_with_text(text1, token_count=100, sequence_number=0)
         node1.compression_level = CompressionLevel.COMPACTED
 
-        node2 = self._create_node_with_text(text2, token_count=100, sequence_number=1)
+        node2 = _create_node_with_text(text2, token_count=100, sequence_number=1)
 
         graph.add_node(node1, connect_temporal=False)
         graph.add_node(node2, connect_temporal=False)
@@ -589,8 +588,8 @@ class TestDeduplicateSemantically:
 
         model.set_similar_texts([text1, text2], similarity=0.95)
 
-        node1 = self._create_node_with_text(text1, token_count=100, sequence_number=0)
-        node2 = self._create_node_with_text(text2, token_count=100, sequence_number=1)
+        node1 = _create_node_with_text(text1, token_count=100, sequence_number=0)
+        node2 = _create_node_with_text(text2, token_count=100, sequence_number=1)
 
         graph.add_node(node1, connect_temporal=False)
         graph.add_node(node2, connect_temporal=False)
@@ -609,7 +608,7 @@ class TestDeduplicateSemantically:
         graph = ContextGraph()
 
         # Add unique content
-        node = self._create_node_with_text("Unique content", token_count=100)
+        node = _create_node_with_text("Unique content", token_count=100)
         graph.add_node(node, connect_temporal=False)
         semantic_index.index_node(node)
 
@@ -636,24 +635,6 @@ class TestDeduplicateSemanticallyCanonicalSelection:
     def semantic_index(self, model: DeterministicEmbeddingModel) -> SemanticIndex:
         return SemanticIndex(model)
 
-    def _create_node_with_text(
-        self,
-        text: str,
-        token_count: int = 100,
-        importance: float = 0.5,
-        sequence_number: int | None = None,
-    ) -> ContextNode:
-        """Helper to create a node with specific text content."""
-        node = ContextNode(
-            id=uuid4(),
-            type=NodeType.MESSAGE,
-            content=Content(text=text, role=None),
-            metadata=NodeMetadata(importance=importance),
-            token_count=token_count,
-            sequence_number=sequence_number,
-        )
-        return node
-
     def test_prefer_recent_selects_newer_node(
         self,
         model: DeterministicEmbeddingModel,
@@ -673,11 +654,11 @@ class TestDeduplicateSemanticallyCanonicalSelection:
         model.set_identical_texts([text, text])
 
         # Older node with same importance
-        node1 = self._create_node_with_text(
+        node1 = _create_node_with_text(
             text, token_count=100, importance=0.5, sequence_number=0
         )
         # Newer node with same importance
-        node2 = self._create_node_with_text(
+        node2 = _create_node_with_text(
             text, token_count=100, importance=0.5, sequence_number=10
         )
 
@@ -714,11 +695,11 @@ class TestDeduplicateSemanticallyCanonicalSelection:
         model.set_identical_texts([text, text])
 
         # Lower importance node
-        node1 = self._create_node_with_text(
+        node1 = _create_node_with_text(
             text, token_count=100, importance=0.3, sequence_number=0
         )
         # Higher importance node
-        node2 = self._create_node_with_text(
+        node2 = _create_node_with_text(
             text, token_count=100, importance=0.9, sequence_number=1
         )
 
@@ -757,11 +738,11 @@ class TestDeduplicateSemanticallyCanonicalSelection:
         model.set_similar_texts([text1, text2], similarity=0.95)
 
         # Smaller node
-        node1 = self._create_node_with_text(
+        node1 = _create_node_with_text(
             text1, token_count=80, importance=0.5, sequence_number=0
         )
         # Larger node
-        node2 = self._create_node_with_text(
+        node2 = _create_node_with_text(
             text2, token_count=200, importance=0.5, sequence_number=1
         )
 

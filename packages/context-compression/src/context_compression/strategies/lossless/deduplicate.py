@@ -10,6 +10,7 @@ from __future__ import annotations
 import contextlib
 import json
 import time
+from collections import deque
 from typing import TYPE_CHECKING
 from uuid import UUID
 
@@ -91,6 +92,14 @@ class DeduplicateSemantically(BaseCompressionStrategy):
     def _priority(self) -> int:
         return 20  # Run after externalize (10), before collapse (20+)
 
+    def _is_eligible(self, node: ContextNode) -> bool:
+        """Check if a node is eligible for deduplication."""
+        return (
+            (node.token_count or 0) >= self._min_tokens
+            and not node.metadata.pinned
+            and node.compression_level == CompressionLevel.FULL
+        )
+
     def _find_duplicate_groups(
         self,
         duplicates: list[tuple[UUID, UUID, float]],
@@ -125,20 +134,8 @@ class DeduplicateSemantically(BaseCompressionStrategy):
             if not node1 or not node2:
                 continue
 
-            # Skip if either node is too small
-            if (node1.token_count or 0) < self._min_tokens:
-                continue
-            if (node2.token_count or 0) < self._min_tokens:
-                continue
-
-            # Skip pinned nodes
-            if node1.metadata.pinned or node2.metadata.pinned:
-                continue
-
-            # Skip already compressed nodes
-            if node1.compression_level != CompressionLevel.FULL:
-                continue
-            if node2.compression_level != CompressionLevel.FULL:
+            # Skip ineligible nodes (too small, pinned, or already compressed)
+            if not self._is_eligible(node1) or not self._is_eligible(node2):
                 continue
 
             # Add to adjacency
@@ -162,19 +159,17 @@ class DeduplicateSemantically(BaseCompressionStrategy):
 
             # BFS to find all connected nodes
             component: set[UUID] = set()
-            queue = [start_id]
+            queue: deque[UUID] = deque([start_id])
 
             while queue:
-                current = queue.pop(0)
+                current = queue.popleft()
                 if current in visited:
                     continue
 
                 visited.add(current)
                 component.add(current)
-
-                for neighbor in adjacency.get(current, set()):
-                    if neighbor not in visited:
-                        queue.append(neighbor)
+                neighbors = adjacency.get(current, set())
+                queue.extend(n for n in neighbors if n not in visited)
 
             if len(component) >= 2:
                 components.append(component)
@@ -190,15 +185,17 @@ class DeduplicateSemantically(BaseCompressionStrategy):
                 if node_id == canonical_id:
                     continue
 
-                # Get similarity score with canonical
+                # Get similarity score with canonical (or connected node fallback)
                 score = similarity_map.get((canonical_id, node_id), 0.0)
-                if score == 0.0:
-                    # If no direct edge, estimate from any connected node
-                    for other_id in component:
-                        if other_id != node_id:
-                            score = similarity_map.get((other_id, node_id), 0.0)
-                            if score > 0:
-                                break
+                if not score:
+                    score = next(
+                        (
+                            similarity_map.get((oid, node_id), 0.0)
+                            for oid in component
+                            if oid != node_id
+                        ),
+                        0.0,
+                    )
 
                 duplicates_list.append((node_id, score))
 
@@ -279,6 +276,22 @@ class DeduplicateSemantically(BaseCompressionStrategy):
 
         # Return highest scoring node
         return max(scores.keys(), key=lambda x: scores[x])
+
+    def _empty_result(
+        self, graph: ContextGraph, start_time: float
+    ) -> CompressionResult:
+        """Create an empty compression result for no-op cases."""
+        return CompressionResult(
+            success=True,
+            strategy_name=self.name,
+            tier=self.tier,
+            original_tokens=0,
+            compressed_tokens=0,
+            tokens_saved=0,
+            nodes_processed=len(graph),
+            is_recoverable=True,
+            duration_ms=(time.perf_counter() - start_time) * 1000,
+        )
 
     def _serialize_node_content(self, node: ContextNode) -> str:
         """Serialize node content for recovery.
@@ -402,33 +415,13 @@ class DeduplicateSemantically(BaseCompressionStrategy):
         )
 
         if not duplicates:
-            return CompressionResult(
-                success=True,
-                strategy_name=self.name,
-                tier=self.tier,
-                original_tokens=0,
-                compressed_tokens=0,
-                tokens_saved=0,
-                nodes_processed=len(graph),
-                is_recoverable=True,
-                duration_ms=(time.perf_counter() - start_time) * 1000,
-            )
+            return self._empty_result(graph, start_time)
 
         # Build duplicate groups with transitive closure
         groups = self._find_duplicate_groups(duplicates, graph)
 
         if not groups:
-            return CompressionResult(
-                success=True,
-                strategy_name=self.name,
-                tier=self.tier,
-                original_tokens=0,
-                compressed_tokens=0,
-                tokens_saved=0,
-                nodes_processed=len(graph),
-                is_recoverable=True,
-                duration_ms=(time.perf_counter() - start_time) * 1000,
-            )
+            return self._empty_result(graph, start_time)
 
         target_set = set(target_node_ids) if target_node_ids else None
 
