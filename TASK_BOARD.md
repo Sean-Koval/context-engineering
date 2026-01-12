@@ -1,9 +1,9 @@
 # ContextEngine: Complete Task Board
 
-> **Total Tasks**: 157 | **Completed**: 87 | **Total Hours**: ~582 hours | **Duration**: 24 weeks
+> **Total Tasks**: 157 | **Completed**: 92 | **Total Hours**: ~582 hours | **Duration**: 24 weeks
 > This document provides a complete, granular task breakdown for implementation.
 >
-> **Current Progress**: Phase 1 COMPLETE ✅. Phase 2 ~55% complete. CompressionPipeline, RecoveryManifest, lossless strategies, and SchemaCompression done.
+> **Current Progress**: Phase 1 COMPLETE ✅. Phase 2 ~70% complete. All lossless strategies done. SchemaCompression and EntityCentricCompression done.
 
 ---
 
@@ -174,8 +174,8 @@
 | LS-004 | Implement `ExternalizePayloads._is_candidate()` | 2 | LS-001 | ✅ | Claude |
 | LS-005 | Implement `ExternalizePayloads._create_preview()` | 3 | LS-004 | ✅ | Claude |
 | LS-006 | Implement `ExternalizePayloads.compress()` | 6 | LS-004, LS-005 | ✅ | Claude |
-| LS-007 | Implement `DeduplicateSemantically._find_duplicates()` | 4 | SI-008 | ⬜ | |
-| LS-008 | Implement `DeduplicateSemantically.compress()` | 5 | LS-007 | ⬜ | |
+| LS-007 | Implement `DeduplicateSemantically._find_duplicates()` | 4 | SI-008 | ✅ | Claude |
+| LS-008 | Implement `DeduplicateSemantically.compress()` | 5 | LS-007 | ✅ | Claude |
 | LS-009 | Implement `CollapseToolChains._find_chains()` | 4 | - | ✅ | Claude |
 | LS-010 | Implement `CollapseToolChains._create_chain_summary()` | 3 | LS-009 | ✅ | Claude |
 | LS-011 | Implement `CollapseToolChains.compress()` | 4 | LS-009, LS-010 | ✅ | Claude |
@@ -191,9 +191,9 @@
 | CS-002 | Implement `SchemaCompression._find_schema_occurrences()` | 3 | CS-001 | ✅ | Claude |
 | CS-003 | Implement `SchemaCompression._extract_values()` | 2 | CS-001 | ✅ | Claude |
 | CS-004 | Implement `SchemaCompression.compress()` | 5 | CS-001-CS-003 | ✅ | Claude |
-| CS-005 | Implement `EntityCentricCompression._split_sentences()` | 2 | - | ⬜ | |
-| CS-006 | Implement `EntityCentricCompression._sentence_has_entity()` | 2 | CS-005 | ⬜ | |
-| CS-007 | Implement `EntityCentricCompression.compress()` | 6 | CS-005, CS-006, ET-* | ⬜ | |
+| CS-005 | Implement `EntityCentricCompression._split_sentences()` | 2 | - | ✅ | Claude |
+| CS-006 | Implement `EntityCentricCompression._sentence_has_entity()` | 2 | CS-005 | ✅ | Claude |
+| CS-007 | Implement `EntityCentricCompression.compress()` | 6 | CS-005, CS-006, ET-* | ✅ | Claude |
 | CS-008 | Implement `TaskRelevanceCompression` (placeholder LLM) | 6 | - | ⬜ | |
 | CS-009 | Write unit tests for compaction strategies | 8 | CS-001-CS-008 | ⬜ | |
 
@@ -606,5 +606,5 @@ Total: 24 weeks
 
 *Last Updated: 2026-01-12*
 *Total Tasks: 157*
-*Completed Tasks: 87*
+*Completed Tasks: 92*
 *Total Estimated Hours: ~582*

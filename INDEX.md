@@ -132,11 +132,11 @@ ContextEngine
 - [x] **Lossless Strategies** ✅
   - [x] ExternalizePayloads ✅
   - [x] FileSystemExternalStorage ✅
-  - [ ] DeduplicateSemantically
+  - [x] DeduplicateSemantically ✅
   - [x] CollapseToolChains ✅
-- [ ] **Compaction Strategies** (1/3 complete)
+- [ ] **Compaction Strategies** (2/3 complete)
   - [x] SchemaCompression ✅
-  - [ ] EntityCentricCompression
+  - [x] EntityCentricCompression ✅
   - [ ] TaskRelevanceCompression
 - [ ] **Summarization Strategies**
   - [ ] HierarchicalSummarization
@@ -246,17 +246,18 @@ These are opportunities for novel contributions:
 ✅ 8. context-compression/lossless (ExternalizePayloads, CollapseToolChains) - DONE
 ✅ 9. context-compression/lossless (FileSystemExternalStorage) - DONE
 ✅ 10. context-compression/compaction (SchemaCompression) - DONE
+✅ 11. context-compression/lossless (DeduplicateSemantically) - DONE
+✅ 12. context-compression/compaction (EntityCentricCompression) - DONE
 
 # Phase 1: COMPLETE ✅
-# Phase 2: IN PROGRESS (~55%)
+# Phase 2: IN PROGRESS (~70%)
 
 # Next steps:
-11. DeduplicateSemantically strategy
-12. Compaction strategies (EntityCentric, TaskRelevance)
-13. Summarization strategies (Hierarchical, TaskAware, Incremental)
-14. Implement context-memory backends
-15. Add context-tools caching
-16. Build multi-agent last
+13. TaskRelevanceCompression strategy
+14. Summarization strategies (Hierarchical, TaskAware, Incremental)
+15. Implement context-memory backends
+16. Add context-tools caching
+17. Build multi-agent last
 ```
 
 ---
@@ -292,4 +293,4 @@ These are opportunities for novel contributions:
 
 ---
 
-*Last Updated: 2026-01-12 | Phase 1: COMPLETE ✅ | Phase 2: ~55% (pipeline + lossless + SchemaCompression)*
+*Last Updated: 2026-01-12 | Phase 1: COMPLETE ✅ | Phase 2: ~70% (pipeline + lossless + 2 compaction strategies)*
