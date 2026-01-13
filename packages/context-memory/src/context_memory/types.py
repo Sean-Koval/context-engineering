@@ -8,13 +8,10 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 from enum import Enum
-from typing import TYPE_CHECKING, Any
+from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel, Field, field_validator
-
-if TYPE_CHECKING:
-    pass
 
 
 class StorageTier(str, Enum):

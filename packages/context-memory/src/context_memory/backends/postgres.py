@@ -137,9 +137,7 @@ class PostgresStore:
     def _db(self) -> asyncpg.Pool:
         """Get connection pool, raising if not initialized."""
         if self._pool is None:
-            raise RuntimeError(
-                "Database not initialized. Call initialize() first."
-            )
+            raise RuntimeError("Database not initialized. Call initialize() first.")
         return self._pool
 
     # =========================================================================
@@ -311,15 +309,9 @@ class PostgresStore:
 
         token_count = node.token_count or 0
         importance = (
-            node.metadata.importance
-            if hasattr(node.metadata, "importance")
-            else 0.5
+            node.metadata.importance if hasattr(node.metadata, "importance") else 0.5
         )
-        tags = (
-            list(node.metadata.tags)
-            if hasattr(node.metadata, "tags")
-            else []
-        )
+        tags = list(node.metadata.tags) if hasattr(node.metadata, "tags") else []
 
         await conn.execute(
             """
@@ -456,10 +448,7 @@ class PostgresStore:
                     results[key_str] = data
 
         # Return in order
-        return [
-            results.get(f"{k.session_id}/{k.node_id}/{k.version}")
-            for k in keys
-        ]
+        return [results.get(f"{k.session_id}/{k.node_id}/{k.version}") for k in keys]
 
     async def delete(
         self,

@@ -311,7 +311,7 @@ class FileSystemStore:
 
         existed = node_path.exists()
 
-        if node_path.exists():
+        if existed:
             await aiofiles.os.remove(node_path)
         if metadata_path.exists():
             await aiofiles.os.remove(metadata_path)
