@@ -458,9 +458,7 @@ class TestPostgresStoreQueries:
         ]
         await store.store_batch(nodes, "test-importance")
 
-        results = await store.search_by_metadata(
-            "test-importance", min_importance=0.5
-        )
+        results = await store.search_by_metadata("test-importance", min_importance=0.5)
         assert len(results) == 2
 
     async def test_search_by_tags(self, store: PostgresStore) -> None:
@@ -606,9 +604,7 @@ class TestPostgresStoreIntegration:
         assert metadata.importance == 1.0
 
         # Search
-        results = await store.search_by_metadata(
-            "test-integration", min_importance=0.9
-        )
+        results = await store.search_by_metadata("test-integration", min_importance=0.9)
         assert len(results) == 1
 
         # Stats
