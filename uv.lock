@@ -533,6 +533,9 @@ dependencies = [
 postgres = [
     { name = "asyncpg" },
 ]
+redis = [
+    { name = "redis" },
+]
 
 [package.dev-dependencies]
 dev = [
@@ -546,8 +549,9 @@ dev = [
 requires-dist = [
     { name = "aiosqlite", specifier = ">=0.22.1" },
     { name = "asyncpg", marker = "extra == 'postgres'", specifier = ">=0.31.0" },
+    { name = "redis", marker = "extra == 'redis'", specifier = ">=7.1.0" },
 ]
-provides-extras = ["postgres"]
+provides-extras = ["postgres", "redis"]
 
 [package.metadata.requires-dev]
 dev = [
