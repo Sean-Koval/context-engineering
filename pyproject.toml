@@ -5,6 +5,9 @@ description = "Context management platform for LLM-powered agents"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "Apache-2.0"
+dependencies = [
+    "aiosqlite>=0.22.1",
+]
 
 [tool.uv.workspace]
 members = ["packages/*"]

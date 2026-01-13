@@ -485,6 +485,9 @@ dev = [{ name = "pytest", specifier = ">=9.0.2" }]
 name = "context-engine"
 version = "0.1.0"
 source = { virtual = "." }
+dependencies = [
+    { name = "aiosqlite" },
+]
 
 [package.dev-dependencies]
 dev = [
@@ -495,6 +498,7 @@ dev = [
 ]
 
 [package.metadata]
+requires-dist = [{ name = "aiosqlite", specifier = ">=0.22.1" }]
 
 [package.metadata.requires-dev]
 dev = [
