@@ -9,6 +9,11 @@ dependencies = [
     "aiosqlite>=0.22.1",
 ]
 
+[project.optional-dependencies]
+postgres = [
+    "asyncpg>=0.31.0",
+]
+
 [tool.uv.workspace]
 members = ["packages/*"]
 

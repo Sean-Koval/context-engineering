@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from context_memory.backends import FileSystemStore, SQLiteStore
+from context_memory.backends import FileSystemStore, PostgresStore, SQLiteStore
 from context_memory.store import MemoryStore
 from context_memory.types import (
     RetrievalResult,
@@ -17,6 +17,7 @@ __all__ = [
     "MemoryStore",
     # Backends
     "FileSystemStore",
+    "PostgresStore",
     "SQLiteStore",
     # Types
     "StorageTier",
