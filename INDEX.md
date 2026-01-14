@@ -151,10 +151,11 @@ ContextEngine
   - [x] Statistics
 
 ### Phase 3: Memory & Tools
-- [ ] **Storage Backends**
-  - [ ] FileSystemStore
-  - [ ] PostgresStore with pgvector
-  - [ ] RedisStore
+- [x] **Storage Backends** ✅
+  - [x] FileSystemStore
+  - [x] PostgresStore with pgvector
+  - [x] RedisStore
+  - [x] SQLiteStore (bonus)
   - [ ] S3Store
 - [ ] **TieredStorage**
   - [ ] Hot/warm/cold tiers
@@ -238,7 +239,7 @@ These are opportunities for novel contributions:
 ## 🚀 Quick Start For Contributors
 
 ```bash
-# Implementation progress (as of 2026-01-11):
+# Implementation progress (as of 2026-01-14):
 ✅ 1. context-core/graph (ContextNode, ContextGraph) - DONE
 ✅ 2. context-core/budget (TokenBudget) - DONE
 ✅ 3. context-core/tokenizer (Tokenizer, TiktokenTokenizer, etc.) - DONE
@@ -253,14 +254,17 @@ These are opportunities for novel contributions:
 ✅ 12. context-compression/compaction (EntityCentricCompression) - DONE
 ✅ 13. context-compression/compaction (TaskRelevanceCompression) - DONE
 ✅ 14. context-compression/summarization (Hierarchical, TaskAware, Incremental) - DONE
+✅ 15. context-memory/backends (FileSystem, Postgres, Redis, SQLite) - DONE (PR #18)
 
 # Phase 1: COMPLETE ✅
 # Phase 2: COMPLETE ✅
+# Phase 3: Storage Layer COMPLETE ✅
 
 # Next steps:
-15. Implement context-memory backends
-16. Add context-tools caching
-17. Build multi-agent last
+16. Implement TieredStorage (TS-001 through TS-009)
+17. Implement MemoryRetriever strategies
+18. Add context-tools caching
+19. Build multi-agent last
 ```
 
 ---
@@ -296,4 +300,4 @@ These are opportunities for novel contributions:
 
 ---
 
-*Last Updated: 2026-01-12 | Phase 1: COMPLETE ✅ | Phase 2: COMPLETE ✅*
+*Last Updated: 2026-01-14 | Phase 1: COMPLETE ✅ | Phase 2: COMPLETE ✅ | Phase 3 Storage: COMPLETE ✅*
