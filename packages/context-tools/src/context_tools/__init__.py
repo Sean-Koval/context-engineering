@@ -29,6 +29,7 @@ from context_tools.cache import (
     StalenessCalculator,
     ToolCallCache,
 )
+from context_tools.compression import ToolResultCompressor
 from context_tools.patterns import (
     ParameterStats,
     ToolSequence,
@@ -58,6 +59,8 @@ __all__ = [
     "PolicyRegistry",
     "StalenessCalculator",
     "ToolCallCache",
+    # Compression
+    "ToolResultCompressor",
     # Patterns
     "ParameterStats",
     "ToolSequence",

@@ -13,7 +13,12 @@ from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
 
-from context_tools.types import ToolCallSignature, ToolPattern
+from context_tools.types import (
+    Antipattern,
+    AntipatternType,
+    ToolCallSignature,
+    ToolPattern,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -416,6 +421,145 @@ class ToolUsagePatterns:
 
         self._cached_patterns = patterns
         self._patterns_dirty = False
+        return patterns
+
+    def detect_antipatterns(self) -> list[Antipattern]:
+        """Detect inefficient tool usage patterns.
+
+        Scans history for patterns that indicate inefficient or wasteful
+        tool usage, such as repeated identical calls or unused results.
+
+        Returns:
+            List of detected antipatterns with suggestions for improvement
+        """
+        antipatterns: list[Antipattern] = []
+
+        # Detect repeated identical calls
+        antipatterns.extend(self._detect_repeated_calls())
+
+        # Detect unused search results
+        antipatterns.extend(self._detect_unused_results())
+
+        # Detect multiple reads of the same file
+        antipatterns.extend(self._detect_multi_reads())
+
+        return antipatterns
+
+    def _detect_repeated_calls(self) -> list[Antipattern]:
+        """Detect repeated identical tool calls.
+
+        Finds cases where the same tool is called with identical arguments
+        multiple times, which usually indicates missing caching.
+        """
+        import json
+
+        call_counts: dict[tuple[str, str], int] = defaultdict(int)
+
+        for sig in self._history:
+            # Create a hashable key from tool name and sorted arguments
+            args_json = json.dumps(sig.arguments, sort_keys=True)
+            key = (sig.tool_name, args_json)
+            call_counts[key] += 1
+
+        patterns: list[Antipattern] = []
+        for (tool, _), count in call_counts.items():
+            if count >= 3:  # Same call 3+ times suggests missing caching
+                desc = f"Tool '{tool}' called {count} times with identical args"
+                patterns.append(
+                    Antipattern(
+                        type=AntipatternType.REDUNDANT_CALL,
+                        tool_name=tool,
+                        description=desc,
+                        occurrences=count,
+                        tokens_wasted=(count - 1) * 100,
+                        suggestion="Consider caching results for repeated calls",
+                    )
+                )
+
+        return patterns
+
+    def _detect_unused_results(self) -> list[Antipattern]:
+        """Detect search/query results that appear unused.
+
+        Finds cases where a search or query tool is called but the next
+        tool is not a read or follow-up action on the results.
+        """
+        search_tools = {"search", "grep", "find", "glob", "query", "list"}
+        follow_up_tools = {"read", "read_file", "get", "fetch", "open"}
+
+        patterns: list[Antipattern] = []
+
+        for i in range(len(self._history) - 1):
+            curr = self._history[i]
+            next_call = self._history[i + 1]
+
+            # Check if current is a search-type tool
+            curr_lower = curr.tool_name.lower()
+            if any(s in curr_lower for s in search_tools):
+                # Check if next is NOT a follow-up tool
+                next_lower = next_call.tool_name.lower()
+                if not any(f in next_lower for f in follow_up_tools):
+                    desc = (
+                        f"Search '{curr.tool_name}' followed by "
+                        f"'{next_call.tool_name}' instead of reading results"
+                    )
+                    patterns.append(
+                        Antipattern(
+                            type=AntipatternType.UNUSED_RESULT,
+                            tool_name=curr.tool_name,
+                            description=desc,
+                            occurrences=1,
+                            tokens_wasted=50,
+                            suggestion="Use search results before other operations",
+                        )
+                    )
+
+        return patterns
+
+    def _detect_multi_reads(self) -> list[Antipattern]:
+        """Detect multiple reads of the same file within a short window.
+
+        Finds cases where the same file is read multiple times in close
+        succession, which usually indicates the content should be cached.
+        """
+        read_tools = {"read", "read_file", "cat", "get_file"}
+        path_params = {"path", "file_path", "filename", "file"}
+
+        # Track file reads: path -> list of indices
+        file_reads: dict[str, list[int]] = defaultdict(list)
+
+        for i, sig in enumerate(self._history):
+            tool_lower = sig.tool_name.lower()
+            if any(r in tool_lower for r in read_tools):
+                # Extract path from arguments
+                for param in path_params:
+                    if param in sig.arguments:
+                        path = str(sig.arguments[param])
+                        file_reads[path].append(i)
+                        break
+
+        patterns: list[Antipattern] = []
+        for path, indices in file_reads.items():
+            if len(indices) < 2:
+                continue
+
+            # Check for reads close together (within 10 tool calls)
+            for i in range(len(indices) - 1):
+                gap = indices[i + 1] - indices[i]
+                if gap <= 10:
+                    desc = f"File '{path}' read {len(indices)}x within {gap} calls"
+                    patterns.append(
+                        Antipattern(
+                            type=AntipatternType.REDUNDANT_CALL,
+                            tool_name="read_file",
+                            description=desc,
+                            occurrences=len(indices),
+                            tokens_wasted=(len(indices) - 1) * 200,
+                            suggestion="Cache file contents to avoid re-reading",
+                        )
+                    )
+                    break  # Only report once per file
+
         return patterns
 
     @property

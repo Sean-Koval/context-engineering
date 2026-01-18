@@ -363,3 +363,89 @@ class TestUsageStats:
         assert stats.history_size == 0
         assert stats.unique_tools == 0
         assert stats.tool_frequencies == {}
+
+
+class TestAntipatternDetection:
+    """Tests for antipattern detection methods."""
+
+    def test_detect_antipatterns_empty_history(self) -> None:
+        """Test antipattern detection with empty history."""
+        patterns = ToolUsagePatterns()
+        antipatterns = patterns.detect_antipatterns()
+        assert antipatterns == []
+
+    def test_detect_repeated_calls(self) -> None:
+        """Test detection of repeated identical calls."""
+        patterns = ToolUsagePatterns()
+
+        # Make same call 4 times (threshold is 3)
+        for _ in range(4):
+            patterns.record(
+                ToolCallSignature(tool_name="read_file", arguments={"path": "/same.py"})
+            )
+
+        antipatterns = patterns.detect_antipatterns()
+
+        assert len(antipatterns) >= 1
+        redundant = [a for a in antipatterns if a.tool_name == "read_file"]
+        assert len(redundant) >= 1
+        assert redundant[0].occurrences == 4
+
+    def test_no_detection_below_threshold(self) -> None:
+        """Test that 2 identical calls doesn't trigger repeated-call detection."""
+        patterns = ToolUsagePatterns()
+
+        # Only 2 identical calls (below threshold of 3 for repeated-call detection)
+        # Use a non-read tool to avoid triggering multi-reads detection
+        for _ in range(2):
+            patterns.record(
+                ToolCallSignature(tool_name="execute", arguments={"cmd": "ls"})
+            )
+
+        antipatterns = patterns.detect_antipatterns()
+        redundant = [a for a in antipatterns if a.tool_name == "execute"]
+        assert len(redundant) == 0
+
+    def test_detect_unused_search_results(self) -> None:
+        """Test detection of search followed by non-read."""
+        patterns = ToolUsagePatterns()
+
+        patterns.record(ToolCallSignature(tool_name="grep", arguments={"pattern": "x"}))
+        patterns.record(ToolCallSignature(tool_name="write", arguments={"path": "/x"}))
+
+        antipatterns = patterns.detect_antipatterns()
+
+        unused = [a for a in antipatterns if a.tool_name == "grep"]
+        assert len(unused) >= 1
+
+    def test_no_unused_when_followed_by_read(self) -> None:
+        """Test that search followed by read is not flagged."""
+        patterns = ToolUsagePatterns()
+
+        patterns.record(ToolCallSignature(tool_name="search", arguments={"q": "x"}))
+        patterns.record(
+            ToolCallSignature(tool_name="read_file", arguments={"path": "/x"})
+        )
+
+        antipatterns = patterns.detect_antipatterns()
+
+        unused = [a for a in antipatterns if a.tool_name == "search"]
+        assert len(unused) == 0
+
+    def test_detect_multi_reads_same_file(self) -> None:
+        """Test detection of multiple reads of the same file."""
+        patterns = ToolUsagePatterns()
+
+        # Read same file twice within 3 calls
+        patterns.record(
+            ToolCallSignature(tool_name="read_file", arguments={"path": "/same.py"})
+        )
+        patterns.record(ToolCallSignature(tool_name="other", arguments={}))
+        patterns.record(
+            ToolCallSignature(tool_name="read_file", arguments={"path": "/same.py"})
+        )
+
+        antipatterns = patterns.detect_antipatterns()
+
+        multi = [a for a in antipatterns if "same.py" in a.description]
+        assert len(multi) >= 1
