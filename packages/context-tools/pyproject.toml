@@ -10,8 +10,9 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+semantic = ["sentence-transformers>=2.2"]
 ml = ["scikit-learn>=1.3"]
-all = ["context-tools[ml]"]
+all = ["context-tools[semantic,ml]"]
 
 [build-system]
 requires = ["hatchling"]
