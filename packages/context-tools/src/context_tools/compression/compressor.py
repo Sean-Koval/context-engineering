@@ -4,6 +4,7 @@ Provides compression strategies including:
 - Low-value field filtering
 - Long list truncation with summaries
 - Schema extraction for repeated structures
+- Schema caching with deduplication
 - Tool-specific compression rules
 """
 
@@ -17,6 +18,8 @@ from context_tools.types import CompressionResult
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+
+    from context_tools.compression.schema import SchemaCache, SchemaExtractor
 
 
 class ToolResultCompressor:
@@ -44,6 +47,8 @@ class ToolResultCompressor:
         max_tokens: int = 2000,
         list_truncate_threshold: int = 10,
         list_keep_items: int = 5,
+        schema_cache: SchemaCache | None = None,
+        use_cached_schemas: bool = True,
     ) -> None:
         """Initialize compressor with configuration.
 
@@ -51,10 +56,15 @@ class ToolResultCompressor:
             max_tokens: Target maximum tokens for output
             list_truncate_threshold: Truncate lists longer than this
             list_keep_items: Number of items to keep from truncated lists
+            schema_cache: Optional shared cache for schema deduplication
+            use_cached_schemas: Whether to use schema caching (requires schema_cache)
         """
         self._max_tokens = max_tokens
         self._list_threshold = list_truncate_threshold
         self._list_keep = list_keep_items
+        self._schema_cache = schema_cache
+        self._use_cached_schemas = use_cached_schemas and schema_cache is not None
+        self._schema_extractor: SchemaExtractor | None = None
 
         # Fields to remove (low value, high token cost)
         self._low_value_fields = {
@@ -67,6 +77,14 @@ class ToolResultCompressor:
             "correlation_id",
             "timestamp_ns",
         }
+
+    def _get_schema_extractor(self) -> SchemaExtractor:
+        """Lazy-load schema extractor."""
+        if self._schema_extractor is None:
+            from context_tools.compression.schema import SchemaExtractor
+
+            self._schema_extractor = SchemaExtractor()
+        return self._schema_extractor
 
     def compress(
         self,
@@ -107,10 +125,13 @@ class ToolResultCompressor:
 
         # 3. Extract schemas for repeated structures
         if self._should_extract_schema(compressed):
-            compressed, schema_extracted = self._extract_schema(compressed)
+            compressed, schema_extracted = self._extract_schema(compressed, tool_name)
             if schema_extracted:
                 strategies_applied.append("schema_extraction")
                 metadata["schema_extracted"] = True
+                # Track if schema was from cache
+                if isinstance(compressed, dict) and compressed.get("_schema_cached"):
+                    metadata["schema_cached"] = True
 
         # 4. Apply tool-specific compression
         tool_compressed = self._tool_specific_compression(tool_name, compressed)
@@ -223,29 +244,35 @@ class ToolResultCompressor:
         """Check if data would benefit from schema extraction.
 
         Schema extraction is beneficial for lists of objects with
-        identical keys (like database rows or API results).
+        similar keys (like database rows or API results).
+        Uses SchemaExtractor for more sophisticated analysis.
+
+        Note: Only lists are considered for schema extraction in the
+        compressor context. Single objects benefit less from this
+        optimization.
         """
+        # Only extract schemas from lists (not single objects)
         if not isinstance(data, list):
             return False
-        if len(data) < 3:
-            return False
-        if not all(isinstance(item, dict) for item in data):
-            return False
-
-        # Check if all items have the same keys
-        first_keys = set(data[0].keys())
-        return all(set(item.keys()) == first_keys for item in data)
+        extractor = self._get_schema_extractor()
+        return extractor.can_extract(data)
 
     def _extract_schema(
-        self, data: list[dict[str, Any]]
+        self,
+        data: list[dict[str, Any]],
+        tool_name: str | None = None,
     ) -> tuple[dict[str, Any], bool]:
         """Extract schema from list of similar objects.
 
         Replaces list of dicts with schema + values matrix for
         significant token savings on repeated structures.
 
+        If a schema cache is configured, attempts to find and reuse
+        existing schemas for better deduplication across calls.
+
         Args:
-            data: List of dictionaries with identical keys
+            data: List of dictionaries with similar keys
+            tool_name: Optional tool name for schema tagging
 
         Returns:
             Tuple of (schema-compressed data, success flag)
@@ -253,13 +280,44 @@ class ToolResultCompressor:
         if not data:
             return {"_schema": {}, "_keys": [], "_values": []}, True
 
+        extractor = self._get_schema_extractor()
+
+        # Try to use cached schema if available
+        if self._use_cached_schemas and self._schema_cache is not None:
+            schema, is_cached = self._schema_cache.find_matching(data, extractor)
+            if schema is not None:
+                if not is_cached:
+                    # New schema - add to cache
+                    schema.source_tool = tool_name
+                    self._schema_cache.put(schema)
+
+                # Use schema for compression
+                compressed = extractor.compress_with_schema(data, schema)
+                return {
+                    "_schema_ref": compressed.schema_ref,
+                    "_keys": compressed.keys,
+                    "_values": compressed.values,
+                    "_schema_cached": is_cached,
+                }, True
+
+        # Fallback to simple schema extraction without caching
+        schema = extractor.extract(data, source_tool=tool_name)
+        if schema is not None:
+            compressed = extractor.compress_with_schema(data, schema)
+            return {
+                "_schema": {f.name: f.field_type.value for f in schema.fields},
+                "_keys": compressed.keys,
+                "_values": compressed.values,
+            }, True
+
+        # Final fallback - basic extraction
         first = data[0]
-        schema = {key: type(value).__name__ for key, value in first.items()}
+        schema_dict = {key: type(value).__name__ for key, value in first.items()}
         keys = list(first.keys())
         values = [list(item.values()) for item in data]
 
         return {
-            "_schema": schema,
+            "_schema": schema_dict,
             "_keys": keys,
             "_values": values,
         }, True

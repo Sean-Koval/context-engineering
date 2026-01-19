@@ -303,3 +303,164 @@ class PrefetchCandidate(BaseModel):
         """Determine if prefetch is worthwhile."""
         # Prefetch if confidence is high enough and latency justifies it
         return self.confidence > 0.7 and self.expected_latency_ms > 50
+
+
+# Schema extraction types
+
+
+class SchemaFieldType(str, Enum):
+    """JSON Schema field types for schema extraction."""
+
+    STRING = "string"
+    NUMBER = "number"
+    INTEGER = "integer"
+    BOOLEAN = "boolean"
+    ARRAY = "array"
+    OBJECT = "object"
+    NULL = "null"
+    MIXED = "mixed"  # Multiple types detected
+
+
+class SchemaField(BaseModel):
+    """A field in an extracted schema.
+
+    Represents a single field with its type information,
+    including support for nested structures and optional fields.
+
+    Attributes:
+        name: Field name/key
+        field_type: Primary type of the field
+        optional: Whether field is optional (not in all items)
+        nullable: Whether field can be null
+        nested_schema: For object types, the nested field definitions
+        item_type: For array types, the type of array items
+        sample_values: Sample values for context (limited to 3)
+    """
+
+    name: str
+    field_type: SchemaFieldType
+    optional: bool = False
+    nullable: bool = False
+    nested_schema: list[SchemaField] | None = None
+    item_type: SchemaFieldType | None = None
+    sample_values: list[Any] = Field(default_factory=list, max_length=3)
+
+    def __hash__(self) -> int:
+        """Hash for schema comparison."""
+        nested_hash = (
+            tuple(hash(f) for f in self.nested_schema) if self.nested_schema else None
+        )
+        return hash(
+            (
+                self.name,
+                self.field_type,
+                self.optional,
+                self.nullable,
+                nested_hash,
+                self.item_type,
+            )
+        )
+
+
+class ExtractedSchema(BaseModel):
+    """An extracted and cached schema.
+
+    Represents a schema extracted from structured data,
+    with content-addressable hashing for deduplication.
+
+    Attributes:
+        schema_hash: Content-addressable hash of the schema
+        fields: List of field definitions
+        source_tool: Tool that produced data with this schema
+        ref_count: Number of results using this schema
+        created_at: When schema was first extracted
+        last_used: When schema was last referenced
+        sample_size: Number of items used to infer schema
+    """
+
+    schema_hash: str = Field(description="Content-addressable hash")
+    fields: list[SchemaField]
+    source_tool: str | None = None
+    ref_count: int = Field(default=1, ge=0)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    last_used: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    sample_size: int = Field(default=0, ge=0)
+
+    def touch(self) -> None:
+        """Update usage tracking on schema reference."""
+        self.ref_count += 1
+        self.last_used = datetime.now(UTC)
+
+    @property
+    def field_names(self) -> list[str]:
+        """Get ordered list of field names."""
+        return [f.name for f in self.fields]
+
+    @property
+    def field_count(self) -> int:
+        """Get number of fields in schema."""
+        return len(self.fields)
+
+
+class SchemaCompressedData(BaseModel):
+    """Data compressed using schema extraction.
+
+    Stores data in a columnar format with a schema reference,
+    significantly reducing token usage for repeated structures.
+
+    Attributes:
+        schema_ref: Reference to the cached schema hash
+        keys: Ordered field names (for inline schema)
+        values: List of value tuples matching key order
+        inline_schema: Whether schema is embedded or referenced
+    """
+
+    schema_ref: str | None = Field(
+        default=None, description="Hash reference to cached schema"
+    )
+    keys: list[str] = Field(default_factory=list, description="Field names in order")
+    values: list[list[Any]] = Field(default_factory=list, description="Values matrix")
+    inline_schema: bool = Field(
+        default=True, description="Whether schema is inline or cached"
+    )
+
+    @property
+    def item_count(self) -> int:
+        """Number of items in compressed data."""
+        return len(self.values)
+
+
+class SchemaCacheStats(BaseModel):
+    """Statistics for schema cache monitoring.
+
+    Tracks cache performance including hit rates,
+    deduplication effectiveness, and memory savings.
+
+    Attributes:
+        total_schemas: Number of unique schemas cached
+        total_references: Total times schemas were referenced
+        cache_hits: Times an existing schema was reused
+        cache_misses: Times a new schema was created
+        bytes_saved: Estimated bytes saved from deduplication
+        tokens_saved: Estimated tokens saved from deduplication
+    """
+
+    total_schemas: int = Field(default=0, ge=0)
+    total_references: int = Field(default=0, ge=0)
+    cache_hits: int = Field(default=0, ge=0)
+    cache_misses: int = Field(default=0, ge=0)
+    bytes_saved: int = Field(default=0, ge=0)
+    tokens_saved: int = Field(default=0, ge=0)
+
+    @property
+    def hit_rate(self) -> float:
+        """Calculate cache hit rate."""
+        total = self.cache_hits + self.cache_misses
+        return self.cache_hits / total if total > 0 else 0.0
+
+    @property
+    def dedup_ratio(self) -> float:
+        """Calculate deduplication ratio (refs per schema)."""
+        if self.total_schemas == 0:
+            return 0.0
+        return self.total_references / self.total_schemas

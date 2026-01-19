@@ -29,7 +29,7 @@ from context_tools.cache import (
     StalenessCalculator,
     ToolCallCache,
 )
-from context_tools.compression import ToolResultCompressor
+from context_tools.compression import SchemaCache, SchemaExtractor, ToolResultCompressor
 from context_tools.patterns import (
     ParameterStats,
     ToolSequence,
@@ -43,8 +43,13 @@ from context_tools.types import (
     CacheKeyType,
     CacheStats,
     CompressionResult,
+    ExtractedSchema,
     InvalidationReason,
     PrefetchCandidate,
+    SchemaCacheStats,
+    SchemaCompressedData,
+    SchemaField,
+    SchemaFieldType,
     ToolCallSignature,
     ToolPattern,
 )
@@ -63,6 +68,8 @@ __all__ = [
     "StalenessCalculator",
     "ToolCallCache",
     # Compression
+    "SchemaCache",
+    "SchemaExtractor",
     "ToolResultCompressor",
     # Patterns
     "ParameterStats",
@@ -76,8 +83,13 @@ __all__ = [
     "CacheKeyType",
     "CacheStats",
     "CompressionResult",
+    "ExtractedSchema",
     "InvalidationReason",
     "PrefetchCandidate",
+    "SchemaCompressedData",
+    "SchemaCacheStats",
+    "SchemaField",
+    "SchemaFieldType",
     "ToolCallSignature",
     "ToolPattern",
 ]
