@@ -298,10 +298,9 @@ class SchemaExtractor:
                 if value is None:
                     field_info[key]["nullable"] = True
 
-                if (
-                    len(field_info[key]["samples"]) < self._max_samples
-                    and not isinstance(value, (dict, list))
-                ):
+                if len(
+                    field_info[key]["samples"]
+                ) < self._max_samples and not isinstance(value, (dict, list)):
                     field_info[key]["samples"].append(value)
 
                 if isinstance(value, dict):

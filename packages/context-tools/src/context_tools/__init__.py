@@ -29,7 +29,12 @@ from context_tools.cache import (
     StalenessCalculator,
     ToolCallCache,
 )
-from context_tools.compression import SchemaCache, SchemaExtractor, ToolResultCompressor
+from context_tools.compression import (
+    ListTruncator,
+    SchemaCache,
+    SchemaExtractor,
+    ToolResultCompressor,
+)
 from context_tools.patterns import (
     ParameterStats,
     ToolSequence,
@@ -50,8 +55,12 @@ from context_tools.types import (
     SchemaCompressedData,
     SchemaField,
     SchemaFieldType,
+    StatisticalSummary,
     ToolCallSignature,
     ToolPattern,
+    TruncationResult,
+    TruncationStrategy,
+    TypeDistribution,
 )
 
 __version__ = "0.1.0"
@@ -68,6 +77,7 @@ __all__ = [
     "StalenessCalculator",
     "ToolCallCache",
     # Compression
+    "ListTruncator",
     "SchemaCache",
     "SchemaExtractor",
     "ToolResultCompressor",
@@ -90,6 +100,10 @@ __all__ = [
     "SchemaCacheStats",
     "SchemaField",
     "SchemaFieldType",
+    "StatisticalSummary",
     "ToolCallSignature",
     "ToolPattern",
+    "TruncationResult",
+    "TruncationStrategy",
+    "TypeDistribution",
 ]

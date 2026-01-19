@@ -464,3 +464,146 @@ class SchemaCacheStats(BaseModel):
         if self.total_schemas == 0:
             return 0.0
         return self.total_references / self.total_schemas
+
+
+# List truncation types
+
+
+class TruncationStrategy(str, Enum):
+    """Strategy for truncating long lists."""
+
+    HEAD_TAIL = "head_tail"  # Keep first N and last N items
+    UNIFORM = "uniform"  # Evenly spaced samples across the list
+    RESERVOIR = "reservoir"  # Random reservoir sampling
+    DIVERSE = "diverse"  # Maximize diversity in selection
+    STRATIFIED = "stratified"  # Stratified sampling by type/value
+
+
+class StatisticalSummary(BaseModel):
+    """Statistical summary for numeric lists.
+
+    Provides key statistics when truncating numeric arrays,
+    preserving essential information about the distribution.
+
+    Attributes:
+        count: Total number of items
+        min_value: Minimum value
+        max_value: Maximum value
+        mean: Arithmetic mean
+        std_dev: Standard deviation (None if < 2 items)
+        median: Median value
+        sum_value: Sum of all values
+        percentiles: Key percentiles (25th, 75th)
+    """
+
+    count: int = Field(ge=0)
+    min_value: float
+    max_value: float
+    mean: float
+    std_dev: float | None = None
+    median: float | None = None
+    sum_value: float | None = None
+    percentiles: dict[int, float] = Field(default_factory=dict)
+
+    @property
+    def range(self) -> float:
+        """Calculate value range."""
+        return self.max_value - self.min_value
+
+
+class TypeDistribution(BaseModel):
+    """Distribution of types in a heterogeneous list.
+
+    Tracks what types of items appear in a list and their counts,
+    useful for understanding list composition.
+
+    Attributes:
+        type_counts: Count of each type (string, number, object, etc.)
+        total_items: Total items analyzed
+        is_homogeneous: Whether all items are the same type
+        dominant_type: Most common type
+    """
+
+    type_counts: dict[str, int] = Field(default_factory=dict)
+    total_items: int = Field(default=0, ge=0)
+
+    @property
+    def is_homogeneous(self) -> bool:
+        """Check if all items are the same type."""
+        return len(self.type_counts) <= 1
+
+    @property
+    def dominant_type(self) -> str | None:
+        """Get the most common type."""
+        if not self.type_counts:
+            return None
+        return max(self.type_counts, key=lambda k: self.type_counts[k])
+
+    @property
+    def type_percentages(self) -> dict[str, float]:
+        """Get percentage distribution of types."""
+        if self.total_items == 0:
+            return {}
+        return {
+            t: count / self.total_items * 100 for t, count in self.type_counts.items()
+        }
+
+
+class TruncationResult(BaseModel):
+    """Result of list truncation operation.
+
+    Contains the truncated items along with metadata about
+    the truncation including statistics and type information.
+
+    Attributes:
+        items: The kept items after truncation
+        original_count: Number of items before truncation
+        kept_count: Number of items kept
+        omitted_count: Number of items omitted
+        strategy: Strategy used for truncation
+        statistical_summary: Statistics for numeric lists
+        type_distribution: Type breakdown for heterogeneous lists
+        sample_indices: Original indices of kept items
+        is_truncated: Whether truncation actually occurred
+    """
+
+    items: list[Any]
+    original_count: int = Field(ge=0)
+    kept_count: int = Field(ge=0)
+    omitted_count: int = Field(ge=0)
+    strategy: TruncationStrategy = TruncationStrategy.HEAD_TAIL
+    statistical_summary: StatisticalSummary | None = None
+    type_distribution: TypeDistribution | None = None
+    sample_indices: list[int] = Field(default_factory=list)
+    is_truncated: bool = False
+
+    @property
+    def compression_ratio(self) -> float:
+        """Calculate compression ratio from truncation."""
+        if self.kept_count == 0:
+            return float("inf") if self.original_count > 0 else 1.0
+        return self.original_count / self.kept_count
+
+    def to_compressed_format(self) -> dict[str, Any]:
+        """Convert to dictionary format for JSON output."""
+        result: dict[str, Any] = {
+            "_truncated": self.is_truncated,
+            "_total_items": self.original_count,
+            "_kept_items": self.kept_count,
+            "_strategy": self.strategy.value,
+            "items": self.items,
+        }
+
+        if self.statistical_summary:
+            result["_statistics"] = {
+                "min": self.statistical_summary.min_value,
+                "max": self.statistical_summary.max_value,
+                "mean": self.statistical_summary.mean,
+                "std_dev": self.statistical_summary.std_dev,
+                "median": self.statistical_summary.median,
+            }
+
+        if self.type_distribution and not self.type_distribution.is_homogeneous:
+            result["_type_distribution"] = self.type_distribution.type_counts
+
+        return result
