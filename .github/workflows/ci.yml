@@ -25,7 +25,9 @@ jobs:
         run: uv python install ${{ env.PYTHON_VERSION }}
 
       - name: Install dependencies
-        run: uv sync
+        run: |
+          uv sync
+          uv pip install -e packages/context-core -e packages/context-compression -e packages/context-memory -e packages/context-tools -e packages/context-observe
 
       - name: Check formatting
         run: uv run ruff format --check .
@@ -48,7 +50,9 @@ jobs:
         run: uv python install ${{ env.PYTHON_VERSION }}
 
       - name: Install dependencies
-        run: uv sync
+        run: |
+          uv sync
+          uv pip install -e packages/context-core
 
       - name: Run tests
         run: uv run pytest packages/context-core/tests -v --tb=short
@@ -68,7 +72,9 @@ jobs:
         run: uv python install ${{ env.PYTHON_VERSION }}
 
       - name: Install dependencies
-        run: uv sync
+        run: |
+          uv sync
+          uv pip install -e packages/context-core -e packages/context-compression
 
       - name: Run tests
         run: uv run pytest packages/context-compression/tests -v --tb=short
@@ -88,7 +94,9 @@ jobs:
         run: uv python install ${{ env.PYTHON_VERSION }}
 
       - name: Install dependencies
-        run: uv sync
+        run: |
+          uv sync
+          uv pip install -e packages/context-core -e packages/context-memory
 
       - name: Run tests
         run: uv run pytest packages/context-memory/tests -v --tb=short
@@ -108,7 +116,9 @@ jobs:
         run: uv python install ${{ env.PYTHON_VERSION }}
 
       - name: Install dependencies
-        run: uv sync
+        run: |
+          uv sync
+          uv pip install -e packages/context-core -e packages/context-memory -e packages/context-tools
 
       - name: Run tests
         run: uv run pytest packages/context-tools/tests -v --tb=short
@@ -129,7 +139,9 @@ jobs:
         run: uv python install ${{ env.PYTHON_VERSION }}
 
       - name: Install dependencies
-        run: uv sync
+        run: |
+          uv sync
+          uv pip install -e packages/context-core -e packages/context-compression -e packages/context-memory -e packages/context-tools -e packages/context-observe
 
       - name: Run tests with coverage
         run: |
