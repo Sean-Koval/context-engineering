@@ -29,13 +29,19 @@ from context_tools.cache import (
     StalenessCalculator,
     ToolCallCache,
 )
-from context_tools.compression import ToolResultCompressor
+from context_tools.compression import (
+    ListTruncator,
+    SchemaCache,
+    SchemaExtractor,
+    ToolResultCompressor,
+)
 from context_tools.patterns import (
     ParameterStats,
     ToolSequence,
     ToolUsagePatterns,
     UsageStats,
 )
+from context_tools.prefetch import ToolPrefetcher
 from context_tools.types import (
     Antipattern,
     AntipatternType,
@@ -43,10 +49,21 @@ from context_tools.types import (
     CacheKeyType,
     CacheStats,
     CompressionResult,
+    ExtractedSchema,
     InvalidationReason,
     PrefetchCandidate,
+    PrefetchResult,
+    PrefetchStats,
+    SchemaCacheStats,
+    SchemaCompressedData,
+    SchemaField,
+    SchemaFieldType,
+    StatisticalSummary,
     ToolCallSignature,
     ToolPattern,
+    TruncationResult,
+    TruncationStrategy,
+    TypeDistribution,
 )
 
 __version__ = "0.1.0"
@@ -63,12 +80,17 @@ __all__ = [
     "StalenessCalculator",
     "ToolCallCache",
     # Compression
+    "ListTruncator",
+    "SchemaCache",
+    "SchemaExtractor",
     "ToolResultCompressor",
     # Patterns
     "ParameterStats",
     "ToolSequence",
     "ToolUsagePatterns",
     "UsageStats",
+    # Prefetch
+    "ToolPrefetcher",
     # Types
     "Antipattern",
     "AntipatternType",
@@ -76,8 +98,19 @@ __all__ = [
     "CacheKeyType",
     "CacheStats",
     "CompressionResult",
+    "ExtractedSchema",
     "InvalidationReason",
     "PrefetchCandidate",
+    "PrefetchResult",
+    "PrefetchStats",
+    "SchemaCompressedData",
+    "SchemaCacheStats",
+    "SchemaField",
+    "SchemaFieldType",
+    "StatisticalSummary",
     "ToolCallSignature",
     "ToolPattern",
+    "TruncationResult",
+    "TruncationStrategy",
+    "TypeDistribution",
 ]
