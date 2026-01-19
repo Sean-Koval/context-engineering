@@ -4,7 +4,7 @@
 
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Tests](https://img.shields.io/badge/tests-311%20passing-brightgreen.svg)]()
+[![Tests](https://img.shields.io/badge/tests-1259%20passing-brightgreen.svg)]()
 
 ## The Problem
 
@@ -40,16 +40,19 @@ ContextEngine treats context as a **first-class data structure** (graph-based, n
 - **Entity Tracking**: NER-powered entity extraction and importance scoring
 - **Semantic Search**: Embedding-based similarity and duplicate detection
 - **Recovery Manifests**: Track all compression operations for potential rollback
+- **Tiered Storage**: Hot/warm/cold storage with automatic migration policies
+- **Tool Caching**: Semantic and exact-match caching with pattern detection
+- **Predictive Prefetch**: Learn tool patterns and prefetch likely next calls
 - **Observable**: OpenTelemetry tracing and Prometheus metrics built-in
 
 ## Installation
 
 ```bash
 # Using uv (recommended)
-uv add context-core context-compression
+uv add context-core context-compression context-memory context-tools
 
 # Or with pip
-pip install context-core context-compression
+pip install context-core context-compression context-memory context-tools
 ```
 
 ## Quick Start
@@ -96,8 +99,12 @@ if budget.status.needs_compression:
 │  └─────────────┘  └─────────────┘  └─────────────┘              │
 │                                                                  │
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐              │
-│  │  context-   │  │  context-   │  │  context-   │  (Phase 3-4) │
-│  │   memory    │  │    tools    │  │ multiagent  │              │
+│  │  context-   │  │  context-   │  │  context-   │              │
+│  │   memory    │  │    tools    │  │ multiagent  │  (Phase 4)   │
+│  │             │  │             │  │             │              │
+│  │ • Tiered    │  │ • Caching   │  │ • Broker    │              │
+│  │ • Working   │  │ • Patterns  │  │ • Handoff   │              │
+│  │ • Retrieval │  │ • Prefetch  │  │ • Sync      │              │
 │  └─────────────┘  └─────────────┘  └─────────────┘              │
 │                                                                  │
 └─────────────────────────────────────────────────────────────────┘
@@ -105,14 +112,14 @@ if budget.status.needs_compression:
 
 ## Packages
 
-| Package | Description | Status |
-|---------|-------------|--------|
-| `context-core` | Graph, entities, semantic index, token budget | ✅ Complete |
-| `context-compression` | Compression pipeline with 9 strategies | ✅ Complete |
-| `context-observe` | OpenTelemetry tracing, Prometheus metrics | ✅ Complete |
-| `context-memory` | Storage backends, tiered storage, retrieval | 🚧 Phase 3 |
-| `context-tools` | Tool caching, patterns, prefetching | 🚧 Phase 3 |
-| `context-multiagent` | Broker, handoff, shared memory | 🚧 Phase 4 |
+| Package | Description | Status | Tests |
+|---------|-------------|--------|-------|
+| `context-core` | Graph, entities, semantic index, token budget | ✅ Complete | 358 |
+| `context-compression` | Compression pipeline with 9 strategies | ✅ Complete | 311 |
+| `context-observe` | OpenTelemetry tracing, Prometheus metrics | ✅ Complete | - |
+| `context-memory` | Storage backends, tiered storage, retrieval | ✅ Complete | 307 |
+| `context-tools` | Tool caching, patterns, prefetching | ✅ Complete | 283 |
+| `context-multiagent` | Broker, handoff, shared memory | 📅 Phase 4 | - |
 
 ## Compression Strategies
 
@@ -150,8 +157,8 @@ cd context-engineering
 # Install dependencies
 uv sync
 
-# Install packages in development mode
-uv pip install -e packages/context-core -e packages/context-compression -e packages/context-observe
+# Install all packages in development mode
+uv pip install -e packages/context-core -e packages/context-compression -e packages/context-memory -e packages/context-tools -e packages/context-observe
 
 # Run tests
 uv run pytest
@@ -169,7 +176,7 @@ uv run ty check .
 ```
 context-engineering/
 ├── packages/
-│   ├── context-core/           # Foundation package
+│   ├── context-core/           # Foundation package (358 tests)
 │   │   ├── src/context_core/
 │   │   │   ├── graph/          # ContextGraph, nodes, edges
 │   │   │   ├── entities/       # EntityTracker, NER backends
@@ -177,7 +184,7 @@ context-engineering/
 │   │   │   ├── budget/         # TokenBudget, pre-rot detection
 │   │   │   └── tokenizer/      # Tokenizer protocol, implementations
 │   │   └── tests/
-│   ├── context-compression/    # Compression pipeline
+│   ├── context-compression/    # Compression pipeline (311 tests)
 │   │   ├── src/context_compression/
 │   │   │   ├── strategies/
 │   │   │   │   ├── lossless/   # Externalize, deduplicate, collapse
@@ -186,6 +193,22 @@ context-engineering/
 │   │   │   ├── recovery/       # Manifest, operations
 │   │   │   └── pipeline.py     # CompressionPipeline orchestrator
 │   │   └── tests/
+│   ├── context-memory/         # Persistent storage (307 tests)
+│   │   ├── src/context_memory/
+│   │   │   ├── backends/       # FileSystem, SQLite, Postgres, Redis
+│   │   │   ├── retrieval/      # Semantic, Entity, Temporal, Ensemble
+│   │   │   ├── artifacts/      # Versioned artifact management
+│   │   │   ├── tiered.py       # Hot/warm/cold tiered storage
+│   │   │   ├── working.py      # Working memory with LRU cache
+│   │   │   └── eviction.py     # Multi-tier eviction strategies
+│   │   └── tests/
+│   ├── context-tools/          # Tool optimization (283 tests)
+│   │   ├── src/context_tools/
+│   │   │   ├── cache/          # ToolCallCache, semantic matching
+│   │   │   ├── patterns/       # ToolUsagePatterns, antipattern detection
+│   │   │   ├── compression/    # ToolResultCompressor, schema extraction
+│   │   │   └── prefetch/       # ToolPrefetcher, argument prediction
+│   │   └── tests/
 │   └── context-observe/        # Observability
 │       ├── src/context_observe/
 │       │   ├── tracer.py       # OpenTelemetry integration
@@ -193,6 +216,7 @@ context-engineering/
 │       │   └── events.py       # Structured logging
 │       └── tests/
 ├── specs/                      # Technical specifications
+├── docs/                       # Research and analysis
 ├── INDEX.md                    # Implementation progress tracking
 ├── TASK_BOARD.md              # Granular task breakdown
 └── MASTER_ROADMAP.md          # Vision and architecture
@@ -204,7 +228,7 @@ context-engineering/
 |-------|-------|--------|
 | **Phase 1** | Foundation (Graph, Entities, Semantic, Budget) | ✅ Complete |
 | **Phase 2** | Compression (Pipeline, 9 Strategies, Recovery) | ✅ Complete |
-| **Phase 3** | Memory & Tools (Storage, Caching, Patterns) | 🚧 In Progress |
+| **Phase 3** | Memory & Tools (Storage, Caching, Patterns) | ✅ Complete |
 | **Phase 4** | Multi-Agent (Broker, Handoff, Sync) | 📅 Planned |
 
 ## Key Metrics
@@ -214,7 +238,9 @@ context-engineering/
 | Context utilization before degradation | 90%+ | ✅ |
 | Reversible compression ratio | 3-5x | ✅ |
 | Total compression ratio | 10-20x | ✅ |
-| Test coverage | 90%+ | 311 tests |
+| Test coverage | 90%+ | 1,259 tests |
+| Memory retrieval p99 latency | < 100ms | ✅ |
+| Tool cache hit rate | > 60% | ✅ |
 
 ## Contributing
 
