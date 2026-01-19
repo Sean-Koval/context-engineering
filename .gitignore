@@ -49,3 +49,6 @@ htmlcov/
 # Worktree session tracking
 .worktree-sessions.json
 .serena/
+
+# Local task tracking
+.beads/

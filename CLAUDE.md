@@ -340,6 +340,53 @@ Phase 1: Foundation - Building context-core package
 - SemanticIndex with embeddings
 - TokenBudget with pre-rot detection
 
+## Research Learnings: SimpleMem (Jan 2026)
+
+> See `docs/competitive-analysis-simplemem.md` for full analysis.
+
+**SimpleMem** (arXiv:2601.02553) achieves 43.24% F1 on LoCoMo-10 benchmark with ~550 tokens.
+
+### Techniques to Incorporate
+
+| Technique | Priority | Integration Point |
+|-----------|----------|-------------------|
+| **Write-Time Disambiguation** | HIGH | `context-compression/strategies/` |
+| **Complexity-Aware Retrieval** | HIGH | `context-memory/retrieval/adaptive.py` |
+| **Lexical Index (BM25)** | MEDIUM | `context-memory/retrieval/lexical.py` |
+| **LoCoMo Benchmark** | HIGH | `research/benchmarks/locomo.py` |
+
+### Key Implementation Details
+
+1. **Write-Time Disambiguation** (SimpleMem's Φ_coref ∘ Φ_time):
+   - Resolve ALL pronouns to explicit names at ingestion time
+   - Convert relative timestamps to absolute ISO 8601
+   - Creates self-contained, searchable facts
+
+2. **Hybrid Retrieval** (semantic + lexical + symbolic):
+   - Priority ordering: structured > semantic > lexical
+   - BM25 catches exact matches embeddings miss
+   - Reflection loop for complex queries
+
+3. **Adaptive k Formula**:
+   ```
+   k_dyn = floor(k_base * (1 + δ * C_q))
+   ```
+   Where C_q is query complexity (0-1 scale)
+
+### What SimpleMem Validates in ContextEngine Design
+
+- Semantic index for retrieval ✓
+- Entity-based retrieval dimension ✓
+- Multi-strategy hybrid retrieval ✓
+- Compression before retrieval ✓
+
+### Where ContextEngine Is More Sophisticated
+
+- Graph-based relationships (SimpleMem uses flat facts)
+- Recovery manifests (reversible compression)
+- Tiered storage (Hot/Warm/Cold vs single LanceDB)
+- Pre-rot detection (proactive quality management)
+
 ## Verification Steps
 
 Before considering a task complete, Claude should:
@@ -350,4 +397,4 @@ Before considering a task complete, Claude should:
 4. **Test**: `uv run pytest`
 
 ---
-*Last updated: 2026-01-10 by Claude*
+*Last updated: 2026-01-13 by Claude (added SimpleMem research learnings)*
