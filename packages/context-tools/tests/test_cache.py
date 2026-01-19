@@ -258,7 +258,11 @@ class TestToolCallCache:
 
     @pytest.mark.asyncio
     async def test_ttl_expiration(self) -> None:
-        """Test TTL-based expiration."""
+        """Test TTL-based expiration.
+
+        Uses a very short TTL with large margin to avoid flaky timing issues.
+        """
+        # Use minimal TTL (1 second is the minimum the interface accepts)
         cache = ToolCallCache(default_ttl_seconds=1)
 
         sig = ToolCallSignature(tool_name="test", arguments={"a": 1})
@@ -268,8 +272,9 @@ class TestToolCallCache:
         result = await cache.get(sig)
         assert result is not None
 
-        # Wait for expiration
-        await asyncio.sleep(1.1)
+        # Wait well past expiration to ensure TTL has definitely passed
+        # Using 1.5 seconds (50% margin) to handle timing variations
+        await asyncio.sleep(1.5)
 
         # Should miss after TTL
         result = await cache.get(sig)
