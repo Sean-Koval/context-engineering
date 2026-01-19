@@ -28,6 +28,11 @@ dev-dependencies = [
     "ruff>=0.4",
 ]
 
+[tool.pytest.ini_options]
+addopts = ["--import-mode=importlib"]
+asyncio_mode = "auto"
+testpaths = ["packages/*/tests"]
+
 [tool.ruff]
 line-length = 88
 target-version = "py312"
