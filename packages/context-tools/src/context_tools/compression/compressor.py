@@ -291,8 +291,6 @@ class ToolResultCompressor:
 
         return data, truncated, extra_metadata
 
-        return data, truncated
-
     def _should_extract_schema(self, data: Any) -> bool:
         """Check if data would benefit from schema extraction.
 
