@@ -303,3 +303,378 @@ class PrefetchCandidate(BaseModel):
         """Determine if prefetch is worthwhile."""
         # Prefetch if confidence is high enough and latency justifies it
         return self.confidence > 0.7 and self.expected_latency_ms > 50
+
+
+class PrefetchResult(BaseModel):
+    """Result of a prefetch operation.
+
+    Tracks the outcome of speculatively executing a predicted tool call,
+    including whether it was successful and cache status.
+
+    Attributes:
+        tool_name: Name of the prefetched tool
+        arguments: Arguments used for prefetch
+        success: Whether prefetch executed successfully
+        cached: Whether result was stored in cache
+        latency_ms: Execution time in milliseconds
+        error: Error message if prefetch failed
+        result_tokens: Token count of prefetched result
+    """
+
+    tool_name: str
+    arguments: dict[str, Any] = Field(default_factory=dict)
+    success: bool = True
+    cached: bool = False
+    latency_ms: float = Field(default=0.0, ge=0.0)
+    error: str | None = None
+    result_tokens: int = Field(default=0, ge=0)
+
+
+class PrefetchStats(BaseModel):
+    """Statistics for prefetch performance monitoring.
+
+    Tracks metrics to evaluate the effectiveness of predictive
+    tool prefetching, including hit rates and latency savings.
+
+    Attributes:
+        prefetches_started: Total prefetch operations initiated
+        prefetches_completed: Prefetches that completed successfully
+        prefetches_failed: Prefetches that failed
+        prefetch_hits: Times a prefetched result was used
+        prefetch_misses: Times prefetch was not available when needed
+        total_latency_saved_ms: Estimated latency saved from hits
+        pending_count: Currently pending prefetch operations
+    """
+
+    prefetches_started: int = Field(default=0, ge=0)
+    prefetches_completed: int = Field(default=0, ge=0)
+    prefetches_failed: int = Field(default=0, ge=0)
+    prefetch_hits: int = Field(default=0, ge=0)
+    prefetch_misses: int = Field(default=0, ge=0)
+    total_latency_saved_ms: float = Field(default=0.0, ge=0.0)
+    pending_count: int = Field(default=0, ge=0)
+
+    @property
+    def hit_rate(self) -> float:
+        """Calculate prefetch hit rate."""
+        total = self.prefetch_hits + self.prefetch_misses
+        return self.prefetch_hits / total if total > 0 else 0.0
+
+    @property
+    def success_rate(self) -> float:
+        """Calculate prefetch success rate."""
+        total = self.prefetches_completed + self.prefetches_failed
+        return self.prefetches_completed / total if total > 0 else 0.0
+
+    @property
+    def avg_latency_saved_ms(self) -> float:
+        """Calculate average latency saved per hit."""
+        return (
+            self.total_latency_saved_ms / self.prefetch_hits
+            if self.prefetch_hits > 0
+            else 0.0
+        )
+
+
+# Schema extraction types
+
+
+class SchemaFieldType(str, Enum):
+    """JSON Schema field types for schema extraction."""
+
+    STRING = "string"
+    NUMBER = "number"
+    INTEGER = "integer"
+    BOOLEAN = "boolean"
+    ARRAY = "array"
+    OBJECT = "object"
+    NULL = "null"
+    MIXED = "mixed"  # Multiple types detected
+
+
+class SchemaField(BaseModel):
+    """A field in an extracted schema.
+
+    Represents a single field with its type information,
+    including support for nested structures and optional fields.
+
+    Attributes:
+        name: Field name/key
+        field_type: Primary type of the field
+        optional: Whether field is optional (not in all items)
+        nullable: Whether field can be null
+        nested_schema: For object types, the nested field definitions
+        item_type: For array types, the type of array items
+        sample_values: Sample values for context (limited to 3)
+    """
+
+    name: str
+    field_type: SchemaFieldType
+    optional: bool = False
+    nullable: bool = False
+    nested_schema: list[SchemaField] | None = None
+    item_type: SchemaFieldType | None = None
+    sample_values: list[Any] = Field(default_factory=list, max_length=3)
+
+    def __hash__(self) -> int:
+        """Hash for schema comparison."""
+        nested_hash = (
+            tuple(hash(f) for f in self.nested_schema) if self.nested_schema else None
+        )
+        return hash(
+            (
+                self.name,
+                self.field_type,
+                self.optional,
+                self.nullable,
+                nested_hash,
+                self.item_type,
+            )
+        )
+
+
+class ExtractedSchema(BaseModel):
+    """An extracted and cached schema.
+
+    Represents a schema extracted from structured data,
+    with content-addressable hashing for deduplication.
+
+    Attributes:
+        schema_hash: Content-addressable hash of the schema
+        fields: List of field definitions
+        source_tool: Tool that produced data with this schema
+        ref_count: Number of results using this schema
+        created_at: When schema was first extracted
+        last_used: When schema was last referenced
+        sample_size: Number of items used to infer schema
+    """
+
+    schema_hash: str = Field(description="Content-addressable hash")
+    fields: list[SchemaField]
+    source_tool: str | None = None
+    ref_count: int = Field(default=1, ge=0)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    last_used: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    sample_size: int = Field(default=0, ge=0)
+
+    def touch(self) -> None:
+        """Update usage tracking on schema reference."""
+        self.ref_count += 1
+        self.last_used = datetime.now(UTC)
+
+    @property
+    def field_names(self) -> list[str]:
+        """Get ordered list of field names."""
+        return [f.name for f in self.fields]
+
+    @property
+    def field_count(self) -> int:
+        """Get number of fields in schema."""
+        return len(self.fields)
+
+
+class SchemaCompressedData(BaseModel):
+    """Data compressed using schema extraction.
+
+    Stores data in a columnar format with a schema reference,
+    significantly reducing token usage for repeated structures.
+
+    Attributes:
+        schema_ref: Reference to the cached schema hash
+        keys: Ordered field names (for inline schema)
+        values: List of value tuples matching key order
+        inline_schema: Whether schema is embedded or referenced
+    """
+
+    schema_ref: str | None = Field(
+        default=None, description="Hash reference to cached schema"
+    )
+    keys: list[str] = Field(default_factory=list, description="Field names in order")
+    values: list[list[Any]] = Field(default_factory=list, description="Values matrix")
+    inline_schema: bool = Field(
+        default=True, description="Whether schema is inline or cached"
+    )
+
+    @property
+    def item_count(self) -> int:
+        """Number of items in compressed data."""
+        return len(self.values)
+
+
+class SchemaCacheStats(BaseModel):
+    """Statistics for schema cache monitoring.
+
+    Tracks cache performance including hit rates,
+    deduplication effectiveness, and memory savings.
+
+    Attributes:
+        total_schemas: Number of unique schemas cached
+        total_references: Total times schemas were referenced
+        cache_hits: Times an existing schema was reused
+        cache_misses: Times a new schema was created
+        bytes_saved: Estimated bytes saved from deduplication
+        tokens_saved: Estimated tokens saved from deduplication
+    """
+
+    total_schemas: int = Field(default=0, ge=0)
+    total_references: int = Field(default=0, ge=0)
+    cache_hits: int = Field(default=0, ge=0)
+    cache_misses: int = Field(default=0, ge=0)
+    bytes_saved: int = Field(default=0, ge=0)
+    tokens_saved: int = Field(default=0, ge=0)
+
+    @property
+    def hit_rate(self) -> float:
+        """Calculate cache hit rate."""
+        total = self.cache_hits + self.cache_misses
+        return self.cache_hits / total if total > 0 else 0.0
+
+    @property
+    def dedup_ratio(self) -> float:
+        """Calculate deduplication ratio (refs per schema)."""
+        if self.total_schemas == 0:
+            return 0.0
+        return self.total_references / self.total_schemas
+
+
+# List truncation types
+
+
+class TruncationStrategy(str, Enum):
+    """Strategy for truncating long lists."""
+
+    HEAD_TAIL = "head_tail"  # Keep first N and last N items
+    UNIFORM = "uniform"  # Evenly spaced samples across the list
+    RESERVOIR = "reservoir"  # Random reservoir sampling
+    DIVERSE = "diverse"  # Maximize diversity in selection
+    STRATIFIED = "stratified"  # Stratified sampling by type/value
+
+
+class StatisticalSummary(BaseModel):
+    """Statistical summary for numeric lists.
+
+    Provides key statistics when truncating numeric arrays,
+    preserving essential information about the distribution.
+
+    Attributes:
+        count: Total number of items
+        min_value: Minimum value
+        max_value: Maximum value
+        mean: Arithmetic mean
+        std_dev: Standard deviation (None if < 2 items)
+        median: Median value
+        sum_value: Sum of all values
+        percentiles: Key percentiles (25th, 75th)
+    """
+
+    count: int = Field(ge=0)
+    min_value: float
+    max_value: float
+    mean: float
+    std_dev: float | None = None
+    median: float | None = None
+    sum_value: float | None = None
+    percentiles: dict[int, float] = Field(default_factory=dict)
+
+    @property
+    def range(self) -> float:
+        """Calculate value range."""
+        return self.max_value - self.min_value
+
+
+class TypeDistribution(BaseModel):
+    """Distribution of types in a heterogeneous list.
+
+    Tracks what types of items appear in a list and their counts,
+    useful for understanding list composition.
+
+    Attributes:
+        type_counts: Count of each type (string, number, object, etc.)
+        total_items: Total items analyzed
+        is_homogeneous: Whether all items are the same type
+        dominant_type: Most common type
+    """
+
+    type_counts: dict[str, int] = Field(default_factory=dict)
+    total_items: int = Field(default=0, ge=0)
+
+    @property
+    def is_homogeneous(self) -> bool:
+        """Check if all items are the same type."""
+        return len(self.type_counts) <= 1
+
+    @property
+    def dominant_type(self) -> str | None:
+        """Get the most common type."""
+        if not self.type_counts:
+            return None
+        return max(self.type_counts, key=lambda k: self.type_counts[k])
+
+    @property
+    def type_percentages(self) -> dict[str, float]:
+        """Get percentage distribution of types."""
+        if self.total_items == 0:
+            return {}
+        return {
+            t: count / self.total_items * 100 for t, count in self.type_counts.items()
+        }
+
+
+class TruncationResult(BaseModel):
+    """Result of list truncation operation.
+
+    Contains the truncated items along with metadata about
+    the truncation including statistics and type information.
+
+    Attributes:
+        items: The kept items after truncation
+        original_count: Number of items before truncation
+        kept_count: Number of items kept
+        omitted_count: Number of items omitted
+        strategy: Strategy used for truncation
+        statistical_summary: Statistics for numeric lists
+        type_distribution: Type breakdown for heterogeneous lists
+        sample_indices: Original indices of kept items
+        is_truncated: Whether truncation actually occurred
+    """
+
+    items: list[Any]
+    original_count: int = Field(ge=0)
+    kept_count: int = Field(ge=0)
+    omitted_count: int = Field(ge=0)
+    strategy: TruncationStrategy = TruncationStrategy.HEAD_TAIL
+    statistical_summary: StatisticalSummary | None = None
+    type_distribution: TypeDistribution | None = None
+    sample_indices: list[int] = Field(default_factory=list)
+    is_truncated: bool = False
+
+    @property
+    def compression_ratio(self) -> float:
+        """Calculate compression ratio from truncation."""
+        if self.kept_count == 0:
+            return float("inf") if self.original_count > 0 else 1.0
+        return self.original_count / self.kept_count
+
+    def to_compressed_format(self) -> dict[str, Any]:
+        """Convert to dictionary format for JSON output."""
+        result: dict[str, Any] = {
+            "_truncated": self.is_truncated,
+            "_total_items": self.original_count,
+            "_kept_items": self.kept_count,
+            "_strategy": self.strategy.value,
+            "items": self.items,
+        }
+
+        if self.statistical_summary:
+            result["_statistics"] = {
+                "min": self.statistical_summary.min_value,
+                "max": self.statistical_summary.max_value,
+                "mean": self.statistical_summary.mean,
+                "std_dev": self.statistical_summary.std_dev,
+                "median": self.statistical_summary.median,
+            }
+
+        if self.type_distribution and not self.type_distribution.is_homogeneous:
+            result["_type_distribution"] = self.type_distribution.type_counts
+
+        return result

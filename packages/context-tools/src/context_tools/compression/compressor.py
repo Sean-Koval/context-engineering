@@ -2,8 +2,9 @@
 
 Provides compression strategies including:
 - Low-value field filtering
-- Long list truncation with summaries
+- Smart list truncation with representative sampling
 - Schema extraction for repeated structures
+- Schema caching with deduplication
 - Tool-specific compression rules
 """
 
@@ -13,10 +14,13 @@ import json
 import re
 from typing import TYPE_CHECKING, Any
 
-from context_tools.types import CompressionResult
+from context_tools.types import CompressionResult, TruncationStrategy
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+
+    from context_tools.compression.schema import SchemaCache, SchemaExtractor
+    from context_tools.compression.truncation import ListTruncator
 
 
 class ToolResultCompressor:
@@ -44,6 +48,10 @@ class ToolResultCompressor:
         max_tokens: int = 2000,
         list_truncate_threshold: int = 10,
         list_keep_items: int = 5,
+        schema_cache: SchemaCache | None = None,
+        use_cached_schemas: bool = True,
+        use_smart_truncation: bool = True,
+        truncation_strategy: TruncationStrategy | None = None,
     ) -> None:
         """Initialize compressor with configuration.
 
@@ -51,10 +59,20 @@ class ToolResultCompressor:
             max_tokens: Target maximum tokens for output
             list_truncate_threshold: Truncate lists longer than this
             list_keep_items: Number of items to keep from truncated lists
+            schema_cache: Optional shared cache for schema deduplication
+            use_cached_schemas: Whether to use schema caching (requires schema_cache)
+            use_smart_truncation: Use ListTruncator for intelligent sampling
+            truncation_strategy: Override strategy (None = auto-select)
         """
         self._max_tokens = max_tokens
         self._list_threshold = list_truncate_threshold
         self._list_keep = list_keep_items
+        self._schema_cache = schema_cache
+        self._use_cached_schemas = use_cached_schemas and schema_cache is not None
+        self._use_smart_truncation = use_smart_truncation
+        self._truncation_strategy = truncation_strategy
+        self._schema_extractor: SchemaExtractor | None = None
+        self._list_truncator: ListTruncator | None = None
 
         # Fields to remove (low value, high token cost)
         self._low_value_fields = {
@@ -67,6 +85,25 @@ class ToolResultCompressor:
             "correlation_id",
             "timestamp_ns",
         }
+
+    def _get_schema_extractor(self) -> SchemaExtractor:
+        """Lazy-load schema extractor."""
+        if self._schema_extractor is None:
+            from context_tools.compression.schema import SchemaExtractor
+
+            self._schema_extractor = SchemaExtractor()
+        return self._schema_extractor
+
+    def _get_list_truncator(self) -> ListTruncator:
+        """Lazy-load list truncator."""
+        if self._list_truncator is None:
+            from context_tools.compression.truncation import ListTruncator
+
+            self._list_truncator = ListTruncator(
+                include_statistics=True,
+                include_type_distribution=True,
+            )
+        return self._list_truncator
 
     def compress(
         self,
@@ -100,17 +137,21 @@ class ToolResultCompressor:
             strategies_applied.append("field_filter")
 
         # 2. Truncate long lists
-        compressed, list_truncated = self._truncate_lists(compressed)
+        compressed, list_truncated, truncation_meta = self._truncate_lists(compressed)
         if list_truncated:
             strategies_applied.append("list_truncation")
             metadata["list_truncated"] = True
+            metadata.update(truncation_meta)
 
         # 3. Extract schemas for repeated structures
         if self._should_extract_schema(compressed):
-            compressed, schema_extracted = self._extract_schema(compressed)
+            compressed, schema_extracted = self._extract_schema(compressed, tool_name)
             if schema_extracted:
                 strategies_applied.append("schema_extraction")
                 metadata["schema_extracted"] = True
+                # Track if schema was from cache
+                if isinstance(compressed, dict) and compressed.get("_schema_cached"):
+                    metadata["schema_cached"] = True
 
         # 4. Apply tool-specific compression
         tool_compressed = self._tool_specific_compression(tool_name, compressed)
@@ -175,77 +216,114 @@ class ToolResultCompressor:
 
         return result
 
-    def _truncate_lists(self, data: Any) -> tuple[Any, bool]:
+    def _truncate_lists(self, data: Any) -> tuple[Any, bool, dict[str, Any]]:
         """Truncate long lists with summary.
+
+        Uses smart truncation with representative sampling when enabled,
+        falling back to simple head/tail truncation otherwise.
 
         Args:
             data: Data potentially containing lists
 
         Returns:
-            Tuple of (processed data, whether any truncation occurred)
+            Tuple of (processed data, whether truncation occurred, extra metadata)
         """
         truncated = False
+        extra_metadata: dict[str, Any] = {}
 
         if isinstance(data, list):
             if len(data) > self._list_threshold:
                 truncated = True
-                keep = self._list_keep // 2
-                head = data[:keep]
-                tail = data[-keep:]
-                omitted = len(data) - 2 * keep
-                summary = {
-                    "_truncated": True,
-                    "_total_items": len(data),
-                    "_showing": f"first {keep} and last {keep}",
-                    "items": head + [{"...": f"{omitted} more items"}] + tail,
-                }
-                return summary, truncated
+
+                if self._use_smart_truncation:
+                    # Use ListTruncator for intelligent sampling
+                    truncator = self._get_list_truncator()
+
+                    # Auto-select strategy or use configured one
+                    strategy = self._truncation_strategy
+                    if strategy is None:
+                        strategy = truncator.auto_select_strategy(data)
+
+                    result = truncator.truncate(data, self._list_keep, strategy)
+                    summary = result.to_compressed_format()
+
+                    # Add extra metadata
+                    if result.statistical_summary:
+                        extra_metadata["has_statistics"] = True
+                    if result.type_distribution:
+                        extra_metadata["type_distribution"] = (
+                            result.type_distribution.type_counts
+                        )
+                    extra_metadata["truncation_strategy"] = strategy.value
+
+                    return summary, truncated, extra_metadata
+                else:
+                    # Fallback to simple head/tail truncation
+                    keep = self._list_keep // 2
+                    head = data[:keep]
+                    tail = data[-keep:]
+                    omitted = len(data) - 2 * keep
+                    summary = {
+                        "_truncated": True,
+                        "_total_items": len(data),
+                        "_showing": f"first {keep} and last {keep}",
+                        "items": head + [{"...": f"{omitted} more items"}] + tail,
+                    }
+                    return summary, truncated, extra_metadata
 
             # Recurse into list items
-            result = []
+            result_list = []
             for item in data:
-                compressed, item_truncated = self._truncate_lists(item)
-                result.append(compressed)
+                compressed, item_truncated, item_meta = self._truncate_lists(item)
+                result_list.append(compressed)
                 truncated = truncated or item_truncated
-            return result, truncated
+                extra_metadata.update(item_meta)
+            return result_list, truncated, extra_metadata
 
         elif isinstance(data, dict):
-            result = {}
+            result_dict: dict[str, Any] = {}
             for key, value in data.items():
-                compressed, item_truncated = self._truncate_lists(value)
-                result[key] = compressed
+                compressed, item_truncated, item_meta = self._truncate_lists(value)
+                result_dict[key] = compressed
                 truncated = truncated or item_truncated
-            return result, truncated
+                extra_metadata.update(item_meta)
+            return result_dict, truncated, extra_metadata
 
-        return data, truncated
+        return data, truncated, extra_metadata
 
     def _should_extract_schema(self, data: Any) -> bool:
         """Check if data would benefit from schema extraction.
 
         Schema extraction is beneficial for lists of objects with
-        identical keys (like database rows or API results).
+        similar keys (like database rows or API results).
+        Uses SchemaExtractor for more sophisticated analysis.
+
+        Note: Only lists are considered for schema extraction in the
+        compressor context. Single objects benefit less from this
+        optimization.
         """
+        # Only extract schemas from lists (not single objects)
         if not isinstance(data, list):
             return False
-        if len(data) < 3:
-            return False
-        if not all(isinstance(item, dict) for item in data):
-            return False
-
-        # Check if all items have the same keys
-        first_keys = set(data[0].keys())
-        return all(set(item.keys()) == first_keys for item in data)
+        extractor = self._get_schema_extractor()
+        return extractor.can_extract(data)
 
     def _extract_schema(
-        self, data: list[dict[str, Any]]
+        self,
+        data: list[dict[str, Any]],
+        tool_name: str | None = None,
     ) -> tuple[dict[str, Any], bool]:
         """Extract schema from list of similar objects.
 
         Replaces list of dicts with schema + values matrix for
         significant token savings on repeated structures.
 
+        If a schema cache is configured, attempts to find and reuse
+        existing schemas for better deduplication across calls.
+
         Args:
-            data: List of dictionaries with identical keys
+            data: List of dictionaries with similar keys
+            tool_name: Optional tool name for schema tagging
 
         Returns:
             Tuple of (schema-compressed data, success flag)
@@ -253,13 +331,44 @@ class ToolResultCompressor:
         if not data:
             return {"_schema": {}, "_keys": [], "_values": []}, True
 
+        extractor = self._get_schema_extractor()
+
+        # Try to use cached schema if available
+        if self._use_cached_schemas and self._schema_cache is not None:
+            schema, is_cached = self._schema_cache.find_matching(data, extractor)
+            if schema is not None:
+                if not is_cached:
+                    # New schema - add to cache
+                    schema.source_tool = tool_name
+                    self._schema_cache.put(schema)
+
+                # Use schema for compression
+                compressed = extractor.compress_with_schema(data, schema)
+                return {
+                    "_schema_ref": compressed.schema_ref,
+                    "_keys": compressed.keys,
+                    "_values": compressed.values,
+                    "_schema_cached": is_cached,
+                }, True
+
+        # Fallback to simple schema extraction without caching
+        schema = extractor.extract(data, source_tool=tool_name)
+        if schema is not None:
+            compressed = extractor.compress_with_schema(data, schema)
+            return {
+                "_schema": {f.name: f.field_type.value for f in schema.fields},
+                "_keys": compressed.keys,
+                "_values": compressed.values,
+            }, True
+
+        # Final fallback - basic extraction
         first = data[0]
-        schema = {key: type(value).__name__ for key, value in first.items()}
+        schema_dict = {key: type(value).__name__ for key, value in first.items()}
         keys = list(first.keys())
         values = [list(item.values()) for item in data]
 
         return {
-            "_schema": schema,
+            "_schema": schema_dict,
             "_keys": keys,
             "_values": values,
         }, True

@@ -75,8 +75,12 @@ class TestToolResultCompressor:
         assert "_raw" not in result.compressed_content
 
     def test_truncate_long_list(self) -> None:
-        """Test truncation of lists exceeding threshold."""
-        compressor = ToolResultCompressor(list_truncate_threshold=5, list_keep_items=4)
+        """Test truncation of lists exceeding threshold with simple truncation."""
+        compressor = ToolResultCompressor(
+            list_truncate_threshold=5,
+            list_keep_items=4,
+            use_smart_truncation=False,  # Test simple head/tail truncation
+        )
         data = list(range(20))
 
         result = compressor.compress("test_tool", data)
