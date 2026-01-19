@@ -41,6 +41,7 @@ from context_tools.patterns import (
     ToolUsagePatterns,
     UsageStats,
 )
+from context_tools.prefetch import ToolPrefetcher
 from context_tools.types import (
     Antipattern,
     AntipatternType,
@@ -51,6 +52,8 @@ from context_tools.types import (
     ExtractedSchema,
     InvalidationReason,
     PrefetchCandidate,
+    PrefetchResult,
+    PrefetchStats,
     SchemaCacheStats,
     SchemaCompressedData,
     SchemaField,
@@ -86,6 +89,8 @@ __all__ = [
     "ToolSequence",
     "ToolUsagePatterns",
     "UsageStats",
+    # Prefetch
+    "ToolPrefetcher",
     # Types
     "Antipattern",
     "AntipatternType",
@@ -96,6 +101,8 @@ __all__ = [
     "ExtractedSchema",
     "InvalidationReason",
     "PrefetchCandidate",
+    "PrefetchResult",
+    "PrefetchStats",
     "SchemaCompressedData",
     "SchemaCacheStats",
     "SchemaField",

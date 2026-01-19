@@ -305,6 +305,77 @@ class PrefetchCandidate(BaseModel):
         return self.confidence > 0.7 and self.expected_latency_ms > 50
 
 
+class PrefetchResult(BaseModel):
+    """Result of a prefetch operation.
+
+    Tracks the outcome of speculatively executing a predicted tool call,
+    including whether it was successful and cache status.
+
+    Attributes:
+        tool_name: Name of the prefetched tool
+        arguments: Arguments used for prefetch
+        success: Whether prefetch executed successfully
+        cached: Whether result was stored in cache
+        latency_ms: Execution time in milliseconds
+        error: Error message if prefetch failed
+        result_tokens: Token count of prefetched result
+    """
+
+    tool_name: str
+    arguments: dict[str, Any] = Field(default_factory=dict)
+    success: bool = True
+    cached: bool = False
+    latency_ms: float = Field(default=0.0, ge=0.0)
+    error: str | None = None
+    result_tokens: int = Field(default=0, ge=0)
+
+
+class PrefetchStats(BaseModel):
+    """Statistics for prefetch performance monitoring.
+
+    Tracks metrics to evaluate the effectiveness of predictive
+    tool prefetching, including hit rates and latency savings.
+
+    Attributes:
+        prefetches_started: Total prefetch operations initiated
+        prefetches_completed: Prefetches that completed successfully
+        prefetches_failed: Prefetches that failed
+        prefetch_hits: Times a prefetched result was used
+        prefetch_misses: Times prefetch was not available when needed
+        total_latency_saved_ms: Estimated latency saved from hits
+        pending_count: Currently pending prefetch operations
+    """
+
+    prefetches_started: int = Field(default=0, ge=0)
+    prefetches_completed: int = Field(default=0, ge=0)
+    prefetches_failed: int = Field(default=0, ge=0)
+    prefetch_hits: int = Field(default=0, ge=0)
+    prefetch_misses: int = Field(default=0, ge=0)
+    total_latency_saved_ms: float = Field(default=0.0, ge=0.0)
+    pending_count: int = Field(default=0, ge=0)
+
+    @property
+    def hit_rate(self) -> float:
+        """Calculate prefetch hit rate."""
+        total = self.prefetch_hits + self.prefetch_misses
+        return self.prefetch_hits / total if total > 0 else 0.0
+
+    @property
+    def success_rate(self) -> float:
+        """Calculate prefetch success rate."""
+        total = self.prefetches_completed + self.prefetches_failed
+        return self.prefetches_completed / total if total > 0 else 0.0
+
+    @property
+    def avg_latency_saved_ms(self) -> float:
+        """Calculate average latency saved per hit."""
+        return (
+            self.total_latency_saved_ms / self.prefetch_hits
+            if self.prefetch_hits > 0
+            else 0.0
+        )
+
+
 # Schema extraction types
 
 
